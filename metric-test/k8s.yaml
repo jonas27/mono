@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metric-test
+  labels:
+    app: metric-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metric-test
+  template:
+    metadata:
+      labels:
+        app: metric-test
+    spec:
+      containers:
+      - name: metric-test
+        image: jonas27test/metric-test:v0.1.0
+        ports:
+        - containerPort: 8080
