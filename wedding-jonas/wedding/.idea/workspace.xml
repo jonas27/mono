@@ -1,0 +1,284 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project version="4">
+  <component name="ChangeListManager">
+    <list default="true" id="5964fe5b-66aa-4510-987d-dce783e75740" name="Default Changelist" comment="">
+      <change afterPath="$PROJECT_DIR$/../../wedding/wedding/assets/fonts/Z003-MediumItalic.otf" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../wedding/wedding/assets/img/app_icons/favicon.ico" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../wedding/wedding/assets/img/app_icons/favicon.png" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/../../wedding/wedding/upload.sh" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/codeStyles/Project.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/modules.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/vcs.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../.idea/wedding-jonas.iml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../kube/dep.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../kube/ingress.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../kube/svc.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/.metadata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/build.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/debug/AndroidManifest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/AndroidManifest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/java/com/manserfam/wedding/MainActivity.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/res/drawable/launch_background.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/res/mipmap-hdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/res/mipmap-mdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/main/res/values/styles.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/app/src/profile/AndroidManifest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/build.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/gradle.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/android/settings.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/fonts/DancingScript-Bold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/fonts/DancingScript-Medium.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/fonts/DancingScript-Regular.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/fonts/DancingScript-SemiBold.ttf" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/app_icons/favicon.ico" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/app_icons/favicon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/days/kartoffel.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/days/movie.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/days/nichts.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/days/overview.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/days/picknick.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/days/ringe.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/assets/images/days/wandern.jpg" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Flutter/AppFrameworkInfo.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Flutter/Debug.xcconfig" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Flutter/Release.xcconfig" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.pbxproj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner.xcworkspace/contents.xcworkspacedata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/AppDelegate.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/AppDelegate.m" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Base.lproj/LaunchScreen.storyboard" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Base.lproj/Main.storyboard" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/Info.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/ios/Runner/main.m" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/dayModel.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/dayPage.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/days/kartoffel.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/days/movie.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/days/nichts.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/days/picknick.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/days/wandern.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/main.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/lib/overviewPage.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.lock" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/pubspec.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/test/widget_test.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/upload.sh" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/favicon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/icons/Icon-192.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/icons/Icon-512.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/manifest.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding/pubspec.yaml" beforeDir="false" afterPath="$PROJECT_DIR$/../../wedding/wedding/pubspec.yaml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/.metadata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/build.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/debug/AndroidManifest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/main/AndroidManifest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/main/java/com/manserfam/weddingpictures/MainActivity.java" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/main/res/drawable/launch_background.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/main/res/mipmap-hdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/main/res/mipmap-mdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/main/res/mipmap-xhdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/main/res/mipmap-xxhdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/main/res/mipmap-xxxhdpi/ic_launcher.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/main/res/values/styles.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/app/src/profile/AndroidManifest.xml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/build.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/gradle.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/gradle/wrapper/gradle-wrapper.properties" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/android/settings.gradle" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/.gitignore" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Flutter/AppFrameworkInfo.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Flutter/Debug.xcconfig" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Flutter/Release.xcconfig" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner.xcodeproj/project.pbxproj" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner.xcodeproj/project.xcworkspace/contents.xcworkspacedata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner.xcodeproj/project.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner.xcodeproj/xcshareddata/xcschemes/Runner.xcscheme" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner.xcworkspace/contents.xcworkspacedata" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner.xcworkspace/xcshareddata/IDEWorkspaceChecks.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner.xcworkspace/xcshareddata/WorkspaceSettings.xcsettings" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/AppDelegate.h" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/AppDelegate.m" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Contents.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-1024x1024@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-20x20@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-29x29@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-40x40@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-60x60@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@1x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-76x76@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/AppIcon.appiconset/Icon-App-83.5x83.5@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/LaunchImage.imageset/Contents.json" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@2x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/LaunchImage.imageset/LaunchImage@3x.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Assets.xcassets/LaunchImage.imageset/README.md" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Base.lproj/LaunchScreen.storyboard" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Base.lproj/Main.storyboard" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/Info.plist" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/ios/Runner/main.m" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/lib/main.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/lib/overviewPage.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/pubspec.lock" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/pubspec.yaml" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/test/widget_test.dart" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/web/favicon.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/web/icons/Icon-192.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/web/icons/Icon-512.png" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/web/index.html" beforeDir="false" />
+      <change beforePath="$PROJECT_DIR$/../../wedding/wedding_pictures/web/manifest.json" beforeDir="false" />
+    </list>
+    <option name="SHOW_DIALOG" value="false" />
+    <option name="HIGHLIGHT_CONFLICTS" value="true" />
+    <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
+    <option name="LAST_RESOLUTION" value="IGNORE" />
+  </component>
+  <component name="FileTemplateManagerImpl">
+    <option name="RECENT_TEMPLATES">
+      <list>
+        <option value="Dart File" />
+      </list>
+    </option>
+  </component>
+  <component name="Git.Settings">
+    <option name="RECENT_GIT_ROOT_PATH" value="$PROJECT_DIR$/../.." />
+  </component>
+  <component name="ProjectId" id="1fJeKTFamfrZu3qFtsr1sQVYkAg" />
+  <component name="ProjectLevelVcsManager" settingsEditedManually="true" />
+  <component name="ProjectViewState">
+    <option name="hideEmptyMiddlePackages" value="true" />
+    <option name="showExcludedFiles" value="true" />
+    <option name="showLibraryContents" value="true" />
+  </component>
+  <component name="PropertiesComponent">
+    <property name="dart.analysis.tool.window.force.activate" value="false" />
+    <property name="io.flutter.reload.alreadyRun" value="true" />
+    <property name="last_opened_file_path" value="$PROJECT_DIR$" />
+    <property name="show.migrate.to.gradle.popup" value="false" />
+  </component>
+  <component name="RecentsManager">
+    <key name="CopyFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/assets/images/days" />
+      <recent name="$PROJECT_DIR$/lib/days" />
+      <recent name="$PROJECT_DIR$/lib" />
+      <recent name="$PROJECT_DIR$/assets/images/day_titles" />
+      <recent name="$PROJECT_DIR$/assets/fonts" />
+    </key>
+    <key name="MoveFile.RECENT_KEYS">
+      <recent name="$PROJECT_DIR$/lib/days" />
+      <recent name="$PROJECT_DIR$/lib" />
+      <recent name="$PROJECT_DIR$/lib/cmd" />
+    </key>
+  </component>
+  <component name="SvnConfiguration">
+    <configuration />
+  </component>
+  <component name="TaskManager">
+    <task active="true" id="Default" summary="Default task">
+      <changelist id="5964fe5b-66aa-4510-987d-dce783e75740" name="Default Changelist" comment="" />
+      <created>1595940558371</created>
+      <option name="number" value="Default" />
+      <option name="presentableId" value="Default" />
+      <updated>1595940558371</updated>
+    </task>
+    <servers />
+  </component>
+  <component name="WindowStateProjectService">
+    <state x="713" y="452" width="374" height="569" key="#com.intellij.ide.util.MemberChooser" timestamp="1595997862527">
+      <screen x="60" y="27" width="3380" height="2493" />
+    </state>
+    <state x="713" y="452" width="374" height="569" key="#com.intellij.ide.util.MemberChooser/60.27.3380.2493@60.27.3380.2493" timestamp="1595997862527" />
+    <state width="1634" height="279" key="GridCell.Tab.0.bottom" timestamp="1596225350550">
+      <screen x="60" y="27" width="3380" height="1413" />
+    </state>
+    <state width="1814" height="370" key="GridCell.Tab.0.bottom/60.27.1860.1053@60.27.1860.1053" timestamp="1596200785539" />
+    <state width="1634" height="279" key="GridCell.Tab.0.bottom/60.27.3380.1413/638.1440.1920.1080@60.27.3380.1413" timestamp="1596225350550" />
+    <state width="1644" height="269" key="GridCell.Tab.0.bottom/60.27.3380.2493@60.27.3380.2493" timestamp="1596174605864" />
+    <state width="1634" height="279" key="GridCell.Tab.0.center" timestamp="1596225350549">
+      <screen x="60" y="27" width="3380" height="1413" />
+    </state>
+    <state width="1814" height="370" key="GridCell.Tab.0.center/60.27.1860.1053@60.27.1860.1053" timestamp="1596200785537" />
+    <state width="1634" height="279" key="GridCell.Tab.0.center/60.27.3380.1413/638.1440.1920.1080@60.27.3380.1413" timestamp="1596225350549" />
+    <state width="1644" height="269" key="GridCell.Tab.0.center/60.27.3380.2493@60.27.3380.2493" timestamp="1596174605863" />
+    <state width="1634" height="279" key="GridCell.Tab.0.left" timestamp="1596225350549">
+      <screen x="60" y="27" width="3380" height="1413" />
+    </state>
+    <state width="1814" height="370" key="GridCell.Tab.0.left/60.27.1860.1053@60.27.1860.1053" timestamp="1596200785536" />
+    <state width="1634" height="279" key="GridCell.Tab.0.left/60.27.3380.1413/638.1440.1920.1080@60.27.3380.1413" timestamp="1596225350549" />
+    <state width="1644" height="269" key="GridCell.Tab.0.left/60.27.3380.2493@60.27.3380.2493" timestamp="1596174605863" />
+    <state width="1634" height="279" key="GridCell.Tab.0.right" timestamp="1596225350549">
+      <screen x="60" y="27" width="3380" height="1413" />
+    </state>
+    <state width="1814" height="370" key="GridCell.Tab.0.right/60.27.1860.1053@60.27.1860.1053" timestamp="1596200785538" />
+    <state width="1634" height="279" key="GridCell.Tab.0.right/60.27.3380.1413/638.1440.1920.1080@60.27.3380.1413" timestamp="1596225350549" />
+    <state width="1644" height="269" key="GridCell.Tab.0.right/60.27.3380.2493@60.27.3380.2493" timestamp="1596174605863" />
+    <state width="498" height="446" key="SwitcherDM" timestamp="1596050640573">
+      <screen x="60" y="27" width="1860" height="1053" />
+    </state>
+    <state width="498" height="446" key="SwitcherDM/60.27.1860.1053@60.27.1860.1053" timestamp="1596050640573" />
+    <state x="160" y="127" width="1660" height="853" key="com.android.tools.idea.avdmanager.AvdListDialog" timestamp="1595946919635">
+      <screen x="60" y="27" width="1860" height="1053" />
+    </state>
+    <state x="160" y="127" width="1660" height="853" key="com.android.tools.idea.avdmanager.AvdListDialog/60.27.1860.1053@60.27.1860.1053" timestamp="1595946919635" />
+    <state x="160" y="127" width="1480" height="1213" key="com.intellij.history.integration.ui.views.FileHistoryDialog" timestamp="1596308084014">
+      <screen x="60" y="27" width="3380" height="1413" />
+    </state>
+    <state x="160" y="127" width="1480" height="1213" key="com.intellij.history.integration.ui.views.FileHistoryDialog/60.27.3380.1413/638.1440.1920.1080@60.27.3380.1413" timestamp="1596308084014" />
+    <state x="1125" y="502" key="com.intellij.ide.util.TipDialog" timestamp="1596307361675">
+      <screen x="60" y="27" width="3380" height="1413" />
+    </state>
+    <state x="646" y="381" key="com.intellij.ide.util.TipDialog/60.27.1860.1053@60.27.1860.1053" timestamp="1596198614081" />
+    <state x="1125" y="502" key="com.intellij.ide.util.TipDialog/60.27.3380.1413/638.1440.1920.1080@60.27.3380.1413" timestamp="1596307361675" />
+    <state x="562" y="111" width="855" height="885" key="find.popup" timestamp="1596131953920">
+      <screen x="60" y="27" width="1860" height="1053" />
+    </state>
+    <state x="562" y="111" width="855" height="885" key="find.popup/60.27.1860.1053@60.27.1860.1053" timestamp="1596131953920" />
+  </component>
+</project>
