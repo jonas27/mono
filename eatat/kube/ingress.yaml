@@ -1,0 +1,39 @@
+# Dont use in production
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: eatat
+  namespace: wedding
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /*
+spec:
+  tls:
+  - hosts:
+    - eatat.manserfam.com
+    - www.eatat.manserfam.com
+    secretName: eatat-cert
+  rules:
+  # - host: jonasmanser.com
+  #   http:
+  #     paths:
+  #     - path: /*
+  #       pathType: Prefix
+  #       backend:
+  #         serviceName: wedding
+  #         servicePort: 80
+  - host: eatat.manserfam.com
+    http:
+      paths:
+      - path: /*
+        pathType: Prefix
+        backend:
+          serviceName: eatat
+          servicePort: 80
+  - host: www.eatat.manserfam.com
+    http:
+      paths:
+      - path: /*
+        pathType: Prefix
+        backend:
+          serviceName: eatat
+          servicePort: 80

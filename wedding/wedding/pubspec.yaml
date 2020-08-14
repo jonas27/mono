@@ -23,6 +23,8 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  flutter_localizations:
+    sdk: flutter
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -32,6 +34,7 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: "^0.7.3"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
@@ -46,9 +49,10 @@ flutter:
 
   # To add assets to your application, add an assets section, like this:
   assets:
-  - assets/img/overview.jpg
+  - assets/img/wed/
   - assets/img/hoch.jpg
   - assets/img/test.png
+  - assets/img/app_icons/favicon.png
 
   # An image asset can refer to one or more resolution-specific "variants", see
   # https://flutter.dev/assets-and-images/#resolution-aware.
@@ -64,6 +68,7 @@ flutter:
   fonts:
     - family: DancingScript
       fonts:
+        - asset: assets/fonts/Z003-MediumItalic.otf
         - asset: assets/fonts/DancingScript-Bold.ttf
         - asset: assets/fonts/DancingScript-Medium.ttf
         - asset: assets/fonts/DancingScript-SemiBold.ttf

@@ -1,0 +1,31 @@
+# Dont use in production
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: prewedding
+  namespace: wedding
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /*
+spec:
+  tls:
+  - hosts:
+    - prewedding.manserfam.com
+    - www.prewedding.manserfam.com
+    secretName: prewedding-cert
+  rules:
+  # - host: jonasmanser.com
+  #   http:
+  #     paths:
+  #     - path: /*
+  #       pathType: Prefix
+  #       backend:
+  #         serviceName: wedding
+  #         servicePort: 80
+  - host: prewedding.manserfam.com
+    http:
+      paths:
+      - path: /*
+        pathType: Prefix
+        backend:
+          serviceName: prewedding
+          servicePort: 80
