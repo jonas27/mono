@@ -1,0 +1,35 @@
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: gateway
+  namespace: jblog
+spec:
+  selector:
+    istio: ingressgateway # use Istio default gateway implementation
+  servers:
+  - port:
+      number: 8080
+      name: http
+      protocol: HTTP
+    hosts:
+    - "jonasburster.de"
+    - "www.jonasburster.de"
+  - port:
+      number: 30367
+      name: httpnode
+      protocol: HTTP
+    hosts:
+    - "jonasburster.de"
+    - "www.jonasburster.de"
+    tls:
+      httpsRedirect: true # sends 301 redirect for http requests
+  - port:
+      number: 443
+      name: https-443
+      protocol: HTTPS
+    hosts:
+    - "jonasburster.de"
+    - "www.jonasburster.de"
+    tls:
+      mode: SIMPLE # enables HTTPS on this port
+      credentialName: jblog-cert
