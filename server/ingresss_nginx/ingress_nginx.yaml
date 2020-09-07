@@ -20,9 +20,4 @@ items:
       port: 443
       protocol: TCP
       targetPort: 443
-    selector:
-      app.kubernetes.io/name: ingress-nginx
-      app.kubernetes.io/part-of: ingress-nginx
     type: NodePort
-  status:
-    loadBalancer: {}
