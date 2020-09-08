@@ -1,14 +1,13 @@
 apiVersion: networking.istio.io/v1alpha3
 kind: VirtualService
 metadata:
-  name: vs
-  namespace: jblog
+  name: katchblog
+  namespace: katchblog
 spec:
   hosts:
-  - "jonasburster.de"
-  - "www.jonasburster.de"
+  - "katchblog.com"
   gateways:
-  - gateway
+  - gateway.jblog
   http:
   - match:
     - uri:
@@ -17,4 +16,4 @@ spec:
     - destination:
         port:
           number: 80
-        host: jblog
+        host: katchblog

@@ -12,24 +12,14 @@ spec:
       name: http
       protocol: HTTP
     hosts:
-    - "jonasburster.de"
-    - "www.jonasburster.de"
+    - "*"
   - port:
-      number: 30367
-      name: httpnode
-      protocol: HTTP
-    hosts:
-    - "jonasburster.de"
-    - "www.jonasburster.de"
-    tls:
-      httpsRedirect: true # sends 301 redirect for http requests
-  - port:
-      number: 443
-      name: https-443
+      number: 8443
+      name: https
       protocol: HTTPS
     hosts:
-    - "jonasburster.de"
-    - "www.jonasburster.de"
+    - "*"
     tls:
       mode: SIMPLE # enables HTTPS on this port
       credentialName: jblog-cert
+      serverCertificate: jblog-cert
