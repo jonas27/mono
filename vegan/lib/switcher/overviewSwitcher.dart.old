@@ -1,0 +1,52 @@
+import 'package:flutter/material.dart';
+
+class overviewSwitcher extends StatefulWidget {
+  overviewSwitcher({Key key, this.color, this.titles, this.icon})
+      : super(key: key);
+
+  final Color color;
+  final Icon icon;
+  final List<String> titles;
+
+  @override
+  _overviewSwitcherState createState() => _overviewSwitcherState();
+}
+
+class _overviewSwitcherState extends State<overviewSwitcher> {
+  int _counter = 0;
+  int currIndex = 0;
+
+  void _incrementCounter() {
+    setState(() {
+      _counter++;
+    });
+  }
+
+  List<Widget> _buildOptions() {
+    List<Widget> list = [];
+    list.insert(
+      0,
+      Container(
+        width: 100,
+        child: widget.icon,
+      ),
+    );
+    for(int i=0;i<widget.titles.length;i++) {
+      list.add(
+          Button(Container(
+            alignment: Alignment.centerLeft, width: 100, child: Text(widget.titles[i]))
+      ));
+    }
+    return list;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      color: widget.color,
+      child: Row(
+        children: _buildOptions(),
+      ),
+    );
+  }
+}
