@@ -1,0 +1,42 @@
+--- 
+apiVersion: v1
+kind: Service
+metadata:
+    name: metric-test
+    namespace: jobu-test
+spec:
+    selector:
+        app: metric-test
+
+    ports:
+    - protocol: TCP
+      port: 8080
+      targetPort: 8080
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: metric-test
+  namespace: jobu-test
+  labels:
+    app: metric-test
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: metric-test
+  template:
+    metadata:
+      labels:
+        app: metric-test
+      annotations:
+        prometheus.io.scrape: 'true'
+        prometheus.io.path: /metrics
+        prometheus.io.port: '8080'
+        prometheus.io.scrape_interval: '60s'
+    spec:
+      containers:
+      - name: metric-test
+        image: jonas27test/metric-test:v0.1.0
+        ports:
+        - containerPort: 8080

@@ -5,7 +5,7 @@ RUN export GOPATH="" && \
 
 RUN useradd scratchuser
 
-FROM scratch
+FROM alpine
 COPY --from=builder /etc/ssl/certs/ /etc/ssl/certs
 COPY --from=builder /metric-test /
 COPY --from=builder /etc/passwd /etc/passwd
