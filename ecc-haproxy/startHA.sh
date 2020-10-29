@@ -27,3 +27,5 @@ docker run --name haproxy -p 9090:9090 -p 9091:9091 -v $CERTS_DIR:/etc/ssl/certs
 
 # Analyse server.pem
 # openssl rsa -in certs/server.pem -text -noout
+
+# HA proxy whs auf 1.18.9
