@@ -8,7 +8,7 @@ import (
 )
 
 func main() {
-	MakeRequest(false)
+	MakeRequest(true)
 }
 
 func MakeRequest(rsa bool) {
@@ -23,8 +23,6 @@ func MakeRequest(rsa bool) {
 	if resp.TLS != nil {
 		certificates := resp.TLS.PeerCertificates
 		if len(certificates) > 0 {
-			// you probably want certificates[0]
-			// log.Println(len(certificates))
 			cert := certificates[0]
 			c, _ := x509.ParseCertificate(cert.Raw)
 			log.Println(c.PublicKeyAlgorithm)
