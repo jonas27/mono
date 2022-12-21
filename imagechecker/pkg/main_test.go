@@ -4,19 +4,20 @@ import (
 	"log"
 	"testing"
 
+	"github.com/google/go-containerregistry/pkg/crane"
 	"github.com/google/go-containerregistry/pkg/name"
 )
 
 func TestGetImage(t *testing.T) {
-	ref := "jonas27test/goserver:v1.0.3@sha256:8ae229414f942ccfb7c531952bd4a929607d7a0db60746aefebc4ab02860620e"
-	image, _, err := splitDigest(ref)
+	image := "jonas27test/goserver:v1.0.3@sha256:8ae229414f942ccfb7c531952bd4a929607d7a0db60746aefebc4ab02860620e"
+	desc, err := getImage(image)
 	if err != nil {
 		log.Fatalln(err)
 	}
-
-	correct := getImage(image)
-
-	log.Fatal(correct)
+	digest := "sha256:8ae229414f942ccfb7c531952bd4a929607d7a0db60746aefebc4ab02860620e"
+	if digest != desc.Digest.String() {
+		log.Fatal(desc.Digest.String())
+	}
 }
 
 func TestInternal(t *testing.T) {
@@ -34,9 +35,19 @@ func TestInternal(t *testing.T) {
 
 }
 
-func TestK8sRegistry(t *testing.T) {
-	ref := "registry.k8s.io/ingress-nginx/kube-webhook-certgen:v20220916-gd32f8c343@sha256:39c5b2e3310dc4264d638ad28d9d1d96c4cbb2b2dcfb52368fe4e3c63f61e10f"
-	digest := getImage(ref)
-	if digest != 
-
+// Image can be later loaded with docker load -i <dir>
+func TestSaveOCI(t *testing.T) {
+	img := "ubuntu/zookeeper"
+	desc, err := getImage(img)
+	if err != nil {
+		log.Fatalln(err)
+	}
+	image, err := desc.Image()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	dst := "./test/test.tar"
+	if err := crane.SaveOCI(image, dst); err != nil {
+		log.Fatalf("pulling %s: %s", img, err.Error())
+	}
 }

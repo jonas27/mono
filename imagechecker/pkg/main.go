@@ -132,6 +132,7 @@ func getImage(img string) (*remote.Descriptor, error) {
 	if err != nil {
 		return nil, err
 	}
+	// Maybe use remote.Head
 	desc, err := remote.Get(ref)
 	if err != nil {
 		return nil, err
