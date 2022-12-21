@@ -12,3 +12,4 @@ tasks:
   go:build:
     cmds:
       - go build -o ./imagechecker ./pkg
+      - echo test
