@@ -1,0 +1,14 @@
+version: '3'
+
+vars:
+  IMAGE_REF: "jonas27/imagechecker"
+  VERSION: "0.1.0"
+
+tasks:
+  build:
+    cmds:
+      - podman build ./ -t {{.IMAGE_REF}}:{{.VERSION}} --build-arg VERSION={{.VERSION}}
+
+  go:build:
+    cmds:
+      - go build -o ./imagechecker ./pkg
