@@ -16,6 +16,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/runtime"
 	"k8s.io/client-go/informers"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/cache"
 	"k8s.io/client-go/tools/clientcmd"
 )
@@ -35,17 +36,14 @@ type store struct {
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
 	version := flag.Bool("v", false, "Prints the version of the app.")
+	kubeconfig := flag.String("kubeconfig", "", "Path to Kubernetes config file. Defaults to in-cluster config.")
 	flag.Parse()
 	if *version {
 		fmt.Printf("Version %s\n", os.Getenv("VERSION"))
 		os.Exit(0)
 	}
 
-	kubeconfig := "/home/joe/.kube/config"
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfig)
-	if err != nil {
-		log.Fatal(err)
-	}
+	config := connect(*kubeconfig)
 	clientset, err := kubernetes.NewForConfig(config)
 	if err != nil {
 		log.Fatal(err)
@@ -71,6 +69,25 @@ func main() {
 
 	go informer.Run(stopper)
 	serveMetrics()
+}
+
+func connect(kubeconfig string) *rest.Config {
+	var config *rest.Config
+	var err error
+	if kubeconfig == "" {
+		log.Printf("using in-cluster configuration")
+		config, err = rest.InClusterConfig()
+		if err != nil {
+			log.Panic(err)
+		}
+	} else {
+		log.Printf("using configuration from '%s'", kubeconfig)
+		config, err = clientcmd.BuildConfigFromFlags("", kubeconfig)
+		if err != nil {
+			log.Panic(err)
+		}
+	}
+	return config
 }
 
 func (s *store) add(p corev1.Pod) {

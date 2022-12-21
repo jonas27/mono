@@ -12,4 +12,7 @@ tasks:
   go:build:
     cmds:
       - go build -o ./imagechecker ./pkg
-      - echo test
+  
+  go:run:
+    cmds:
+      - go run ./pkg -kubeconfig=$HOME/.kube/config
