@@ -1,0 +1,16 @@
+version: '3'
+
+vars:
+  IMAGE_REF: "jonas27/photos2022"
+  VERSION: "0.1.0"
+
+tasks:
+  build:
+    cmds:
+      - flutter build web
+      - podman build ./ -t {{.IMAGE_REF}}:{{.VERSION}} 
+  
+  push:
+    cmds:
+      - podman push {{.IMAGE_REF}}:{{.VERSION}} 
+      - podman images jonas27/photos2022 --digests
