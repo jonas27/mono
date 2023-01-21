@@ -19,3 +19,6 @@ samples, guidance on mobile development, and a full API reference.
 # RUN
 * `flutter run -d web-server --web-port=8080`
 * `flutter build web`
+
+# Deps
+* `flutter pub add <package>`

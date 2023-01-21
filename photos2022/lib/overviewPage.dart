@@ -2,6 +2,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:photos2022/gallery.dart';
 
+const URI_NORMAL = "assets/img/photos/%i.jpg";
+const URI_MINI = "assets/img/photos_mini/%i.jpg";
+
 class OverviewPage extends StatefulWidget {
   const OverviewPage({
     Key? key,
@@ -13,23 +16,12 @@ class OverviewPage extends StatefulWidget {
 
 class OverviewPageState extends State<OverviewPage> {
   final double pictureWidth = 140;
-  List<String> pictureUris = [];
+  List<int> pictureUris = [];
 
   @override
   initState() {
-//     Directory dir = Directory('assets/img/wed/');
-// // execute an action on each entry
-//     dir.list(recursive: false).forEach((f) {
-//       print(f.path);
-//     });
-
-    // Directory dir = Directory('assets/img/wed/');
-    // dir.list(recursive: false, followLinks: false).forEach((element) {
-    //   print(element.path);
-    // });
-
     for (int i = 0; i < 68; i++) {
-      pictureUris.add("assets/img/photos/${i.toString()}.jpg");
+      pictureUris.add(i);
     }
     super.initState();
   }

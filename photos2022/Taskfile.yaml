@@ -2,7 +2,7 @@ version: '3'
 
 vars:
   IMAGE_REF: "jonas27/photos2022"
-  VERSION: "0.1.0"
+  VERSION: "0.1.2"
 
 tasks:
   build:
@@ -12,5 +12,17 @@ tasks:
   
   push:
     cmds:
-      - podman push {{.IMAGE_REF}}:{{.VERSION}} 
-      - podman images jonas27/photos2022 --digests
+      - podman push {{.IMAGE_REF}}:{{.VERSION}} --digestfile=Digestfile
+      - cat Digestfile && echo && rm Digestfile
+
+  run:
+    cmds: 
+    - |-
+      FLUTTER_WEB_CANVASKIT_URL=/ flutter run \
+        -d web-server \
+        --web-port=8080 
+  
+  tbuild:
+    cmds:
+    - |-
+      flutter run -d web-server --web-port=8080         --web-renderer=canvaskit         --dart-define=FLUTTER_WEB_CANVASKIT_URL=/canvaskit/

@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:photos2022/overviewPage.dart';
+import 'package:sprintf/sprintf.dart';
 
 class GalleryPager extends StatefulWidget {
   const GalleryPager({
@@ -7,7 +9,7 @@ class GalleryPager extends StatefulWidget {
     required this.pictureUris,
     required this.initialItem,
   }) : super(key: key);
-  final List<String> pictureUris;
+  final List<int> pictureUris;
   final int initialItem;
 
   @override
@@ -34,7 +36,9 @@ class GalleryPagerState extends State<GalleryPager> {
   _createImageList() {
     _focusNode = FocusNode();
     List<Widget> list = [];
-    for (int i = 0; i < widget.pictureUris.length; i++) {
+
+    for (int i in widget.pictureUris) {
+      String uri = sprintf(URI_NORMAL, [i]);
       list.add(
         RawKeyboardListener(
           autofocus: true,
@@ -64,7 +68,7 @@ class GalleryPagerState extends State<GalleryPager> {
           child: Stack(
             children: [
               Center(
-                child: Image(image: AssetImage(widget.pictureUris[i])),
+                child: Image(image: AssetImage(uri)),
               ),
               Row(
                 children: [

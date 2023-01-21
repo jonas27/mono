@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:photos2022/galleryPager.dart';
 import 'package:photos2022/galleryPicture.dart';
+import 'package:photos2022/overviewPage.dart';
+import 'package:sprintf/sprintf.dart';
 
 class Gallery extends StatefulWidget {
   const Gallery({
@@ -11,7 +13,7 @@ class Gallery extends StatefulWidget {
     this.pictureHeight = 140,
   }) : super(key: key);
 
-  final List<String> pictureUris;
+  final List<int> pictureUris;
   final int picturePerRow;
   final double pictureWidth;
   final double pictureHeight;
@@ -28,8 +30,7 @@ class GalleryState extends State<Gallery> {
 
   _addImages() {
     List<Widget> list = [];
-
-    for (int i = 0; i < widget.pictureUris.length; i++) {
+    for (int i in widget.pictureUris) {
       list.add(GestureDetector(
           onTap: (() {
             _showFullScreen(i);
@@ -37,18 +38,21 @@ class GalleryState extends State<Gallery> {
           child: GalleryPicture(
             pictureWidth: widget.pictureWidth,
             pictureHeight: widget.pictureHeight,
-            URI: widget.pictureUris[i],
+            num: i,
           )));
     }
     return list;
   }
 
   _showFullScreen(int i) {
+    String uri = sprintf(URI_NORMAL, [i]);
+    precacheImage(AssetImage(uri), context);
     Navigator.push(
       context,
       MaterialPageRoute(
           builder: (context) => GalleryPager(
-                pictureUris: widget.pictureUris,
+                pictureUris: [uri],
+                // pictureUris: widget.pictureUris,
                 initialItem: i,
               )),
 //      arguments: list[index],
