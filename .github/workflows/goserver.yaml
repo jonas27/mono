@@ -1,20 +1,20 @@
-name: imagechecker
+name: goserver
 
 on:
   push:
     branches: [ "master" ]
     paths:
-    - "**"
+    - "goserver/**"
   pull_request:
     branches: [ "master" ]
     paths:
-    - "**"
+    - "goserver/**"
 
 jobs:
   build:
     runs-on: ubuntu-latest
     env:
-      working-directory: ./
+      working-directory: ./goserver/
     steps:
     - name: Generate build ID
       id: prep
