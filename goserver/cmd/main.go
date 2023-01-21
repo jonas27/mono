@@ -14,7 +14,7 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
-// content holds our static web server content.
+// content holds the static web server content.
 //
 //go:embed static/*
 var static embed.FS
@@ -54,7 +54,6 @@ type gzipResponseWriter struct {
 }
 
 // Use the Writer part of gzipResponseWriter to write the output.
-
 func (w gzipResponseWriter) Write(b []byte) (int, error) {
 	return w.Writer.Write(b)
 }
