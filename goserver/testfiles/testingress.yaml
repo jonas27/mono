@@ -1,0 +1,32 @@
+cat <<EOF | kubectl delete -f -
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: ingress
+  namespace: test
+  annotations:
+    nginx.ingress.kubernetes.io/rewrite-target: /*
+spec:
+  tls:
+  - hosts:
+    - jonasburster.de
+    - www.jonasburster.de
+    secretName: jonas-server-tls
+  rules:
+  - host: jonasburster.de
+    http:
+      paths:
+      - path: /*
+        pathType: Prefix
+        backend:
+          serviceName: testsvc
+          servicePort: 80
+  - host: www.jonasburster.de
+    http:
+      paths:
+      - path: /*
+        pathType: Prefix
+        backend:
+          serviceName: testsvc
+          servicePort: 80
+EOF

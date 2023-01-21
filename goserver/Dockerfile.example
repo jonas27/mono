@@ -1,0 +1,16 @@
+FROM jonas27test/goserver:2.0.0 as builder
+
+# copy your data into container
+COPY cmd/static /build/static
+
+RUN export GOPATH="" && \
+    CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -ldflags '-extldflags "-static"' -o /goserver .
+
+RUN useradd scratchuser
+RUN chown -R scratchuser:scratchuser /cert && chown -R scratchuser:scratchuser /static
+
+FROM alpine
+COPY --from=builder /goserver /
+COPY --from=builder /etc/passwd /etc/passwd
+USER scratchuser
+CMD ["/goserver"]
