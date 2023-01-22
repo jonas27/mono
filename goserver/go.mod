@@ -1,4 +1,4 @@
-module github.com/jonas27test/goserver
+module github.com/jonas27/goserver
 
 go 1.19
 

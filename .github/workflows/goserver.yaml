@@ -46,5 +46,5 @@ jobs:
         context: ${{ env.working-directory }}
         file:  ${{ env.working-directory }}Dockerfile
         push: true
-        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/goserver:${{ steps.prep.outputs.BUILD_ID }}
+        tags: ${{ secrets.DOCKER_HUB_USERNAME }}/goserver:latest
     

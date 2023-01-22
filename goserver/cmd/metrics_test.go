@@ -6,5 +6,5 @@ import (
 
 func TestCustomMetrics(t *testing.T) {
 	metricsServer()
-	serve(":8080", "../static")
+	serve(":8080")
 }
