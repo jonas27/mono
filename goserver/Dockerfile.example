@@ -1,11 +1,11 @@
 FROM jonas27/goserver as builder
 
-# copy your data into container
+# change this line! (copies your static data into container)
 COPY cmd/static static
 
 RUN GOARCH=amd64 GOOS=linux CGO_ENABLED=0 go build -o /goserver main.go
 
-RUN useradd scratchuser && chown -R scratchuser:scratchuser /cert && chown -R scratchuser:scratchuser /static
+RUN useradd scratchuser && chown -R scratchuser:scratchuser /goserver
 
 FROM alpine
 COPY --from=builder /goserver /
