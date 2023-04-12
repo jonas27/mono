@@ -64,7 +64,7 @@ func TestQuay(t *testing.T) {
 }
 
 func TestCustomAuth(t *testing.T) {
-	img := "inx.dockreg.net/portal/certwatcher:v1.3.1@sha256:d16ce69a033cbcc90b2252f1fc656d0c3596d3ce8857963e5c63b3e6f9752d6b"
+	img := "custom.docker.com/test/test:vtest@sha256:dtest"
 	auth, err := customAuth()
 	if err != nil {
 		t.Fatal(err)
