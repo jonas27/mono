@@ -36,7 +36,8 @@ func main() {
 	if *metrics {
 		metricsServer()
 	}
-	serve(*port)
+	compress()
+	// serve(*port)
 }
 
 func serve(port string) {
