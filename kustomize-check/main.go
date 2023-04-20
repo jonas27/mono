@@ -4,10 +4,12 @@ import (
 	"context"
 	"flag"
 	"fmt"
+	"io/fs"
 	"log"
 	"os"
 	"path/filepath"
 	"strings"
+	"sync"
 
 	v1 "github.com/google/go-containerregistry/pkg/v1"
 	"golang.org/x/sync/errgroup"
@@ -21,14 +23,18 @@ import (
 )
 
 const (
-	// exitFail is the exit code if the program
-	// fails.
+	// exitFail is the exit code if the program fails.
 	exitFail = 1
 )
 
+type imagesMutex struct {
+	mu     sync.Mutex
+	images []string
+}
+
 func main() {
 	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	root := flag.String("root", "$HOME", "Root folder for kubernetes configs")
+	root := flag.String("root", "/home/joe/repos/k8s-setup", "Root folder for kubernetes configs")
 	flag.Parse()
 
 	if err := run(*root); err != nil {
@@ -37,57 +43,96 @@ func main() {
 	}
 }
 
-func run(dir string) error {
-	dirs, err := walkDir(dir)
+func run(root string) error {
+	images, err := runKustomize(root)
 	if err != nil {
 		return err
 	}
+	err = runImages(images)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+func runKustomize(root string) (*imagesMutex, error) {
+	dirs, err := walkDir(root)
+	if err != nil {
+		return &imagesMutex{}, err
+	}
+
+	ctx := context.Background()
+	group, ctx := errgroup.WithContext(ctx)
+	group.SetLimit(100)
+
+	var images imagesMutex
+
+	log.Printf("len dirs: %d", len(dirs))
+	for _, v := range dirs {
+		dir := v
+		group.Go(func() error {
+			if ctx.Err() == nil {
+				yaml, err := kustomize(dir)
+				if err != nil {
+					return fmt.Errorf("Can't build %s", dir)
+				}
+				is := parseImages(yaml)
+				images.mu.Lock()
+				images.images = append(images.images, is...)
+				images.mu.Unlock()
+			}
+			return nil
+		})
+	}
+	if err = group.Wait(); err != nil {
+		return &imagesMutex{}, err
+	}
+	log.Println("done with kustomize")
+	return &images, nil
+}
+
+func runImages(images *imagesMutex) error {
 	option, err := customAuth()
 	if err != nil {
 		return err
 	}
-	ctx := context.Background()
-
-	// Create an errgroup to manage the goroutines and their errors
-	group, ctx := errgroup.WithContext(ctx)
-
-	// var wg sync.WaitGroup
-	for _, v := range dirs {
-		wg.Add(1)
-		go func(v string) {
-			defer wg.Done()
-			yaml, err := kustomize(v)
-			select {
-			case <-ctx.Done():
-				return
-			default: // Default is must to avoid blocking
-			}
-			if err != nil {
-				log.Printf("Can't build %s", v)
-				// log.Println(err)
-			}
-			images := parseImages(yaml)
-			err = checkImages(images, option)
-			if err != nil {
-				log.Printf("dir %s: %s", v, err)
-			}
-
-		}(v)
+	// get unique images
+	imagesUnique := make(map[string]bool)
+	for _, v := range images.images {
+		imagesUnique[v] = true
 	}
-	err := g.Wait()
+	keys := []string{}
+	for k, _ := range imagesUnique {
+		keys = append(keys, k)
+	}
+	log.Printf("len images: %d", len(keys))
+
+	// check unique images
+	ctx := context.Background()
+	group, ctx := errgroup.WithContext(ctx)
+	group.SetLimit(100)
+	for _, k := range keys {
+		kk := k
+		group.Go(func() error {
+			if ctx.Err() == nil {
+				err := checkImage(kk, option)
+				if err != nil {
+					return err
+				}
+			}
+			return nil
+		})
+	}
 	return nil
 }
 
 func walkDir(dir string) ([]string, error) {
 	var files []string
-	err := filepath.Walk(dir, func(path string, info os.FileInfo, err error) error {
-		if info.IsDir() {
-			if info.Name() == "staging" {
-				p := filepath.Join(path, "kustomization.yaml")
-				if _, err := os.Stat(p); err == nil {
-					files = append(files, path)
-				}
-			}
+	err := filepath.WalkDir(dir, func(path string, info fs.DirEntry, err error) error {
+		if err != nil {
+			return err
+		}
+		if info.Name() == "kustomization.yaml" {
+			files = append(files, filepath.Dir(path))
 		}
 		return nil
 	})
@@ -108,7 +153,7 @@ func kustomize(dir string) (yaml []byte, err error) {
 	fSys := filesys.MakeFsOnDisk()
 	m, err := k.Run(fSys, dir)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("dir:%s\n%s", dir, err)
 	}
 	yaml, err = m.AsYaml()
 	if err != nil {
@@ -131,17 +176,20 @@ func parseImages(yml []byte) []string {
 
 // not really happy about how the image is calculated; via strings methods.
 // At least there should be a check, maybe the go-container lib has a method to convert string to image url.
-func checkImages(images []string, option remote.Option) error {
-	for _, img := range images {
-		if strings.Contains(img, "@") || strings.Count(img, ":") == 1 {
-			img_split := strings.Split(img, "@")
-			desc, err := remoteImage(img_split[0], option)
-			if err != nil {
-				continue // image has either no digest or no version
-			}
-			if len(img_split) > 1 && img_split[1] != desc.Digest.String() {
-				return fmt.Errorf("%s digest does not match version tag", img)
-			}
+func checkImage(image string, option remote.Option) error {
+	if strings.Contains(image, "@") || strings.Count(image, ":") == 1 {
+		img_split := strings.Split(image, "@")
+		desc, err := remoteImage(img_split[0], option)
+		if err != nil {
+			return err // image has either no digest or no version
+		}
+		if len(img_split) > 1 && img_split[1] != desc.Digest.String() {
+			return fmt.Errorf("%s digest does not match version tag", image)
+		}
+	} else {
+		_, err := remoteImage(image, option)
+		if err != nil {
+			return err
 		}
 	}
 	return nil
