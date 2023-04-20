@@ -1,8 +1,6 @@
 package main
 
 import (
-	"image"
-	"image/jpeg"
 	"io/fs"
 	"log"
 	"path/filepath"
