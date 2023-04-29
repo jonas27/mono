@@ -1,0 +1,10 @@
+version: '3'
+
+tasks:
+  default:
+    cmds:
+      - task --list-all --silent
+
+  build:
+    cmds:
+      - flutter run -d web-server --web-port 8080 --web-hostname 0.0.0.0
