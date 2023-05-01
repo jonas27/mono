@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"flag"
 	"fmt"
 	"io/fs"
 	"log"
@@ -17,6 +16,7 @@ import (
 	"github.com/google/go-containerregistry/pkg/authn"
 	"github.com/google/go-containerregistry/pkg/name"
 	"github.com/google/go-containerregistry/pkg/v1/remote"
+	"github.com/spf13/cobra"
 	"sigs.k8s.io/kustomize/api/krusty"
 	"sigs.k8s.io/kustomize/api/types"
 	"sigs.k8s.io/kustomize/kyaml/filesys"
@@ -32,13 +32,34 @@ type imagesMutex struct {
 	images []string
 }
 
-func main() {
-	log.SetFlags(log.LstdFlags | log.Lshortfile)
-	root := flag.String("root", "/home/joe/repos/k8s-setup", "Root folder for kubernetes configs")
-	flag.Parse()
+var Version = "development"
 
-	if err := run(*root); err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
+func main() {
+	var root string
+
+	rootCmd := &cobra.Command{
+		Use:   "kustomize-check",
+		Short: "Check all dirs under `root` if they are kustomize compilable",
+		Run: func(cmd *cobra.Command, args []string) {
+			if err := run(root); err != nil {
+				fmt.Fprintf(os.Stderr, "%s\n", err)
+				os.Exit(exitFail)
+			}
+		},
+	}
+
+	rootCmd.Flags().StringVarP(&root, "root", "", "/home/joe/repos/k8s-setup", "Root folder for kubernetes configs")
+	versionCmd := &cobra.Command{
+		Use:   "version",
+		Short: "Print the version number",
+		Run: func(cmd *cobra.Command, args []string) {
+			fmt.Printf("Version %s\n", Version)
+		},
+	}
+
+	rootCmd.AddCommand(versionCmd)
+	if err := rootCmd.Execute(); err != nil {
+		fmt.Fprintln(os.Stderr, err)
 		os.Exit(exitFail)
 	}
 }
