@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../http/vocab.dart';
 
 class MyDrawer extends StatelessWidget {
   final bool loggedIn;
@@ -20,7 +21,7 @@ class MyDrawer extends StatelessWidget {
               if (loggedIn) ListTile(
                 title: const Text('Sign out'),
                 onTap: () {
-                  // do something
+                  getVocabList();
                 },
               ),
               if (!loggedIn) ListTile(

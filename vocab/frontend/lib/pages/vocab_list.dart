@@ -1,23 +1,30 @@
 import 'package:flutter/material.dart';
+import '../http/vocab.dart';
 
 class VocabList extends StatelessWidget {
   const VocabList({Key? key}) : super(key: key);
 
+  get() {
+    print("test");
+    getVocabList();
+  }
+
   @override
   Widget build(BuildContext context) {
     List<int> ints = [];
-    for (var  i=0;i<100;i++) {
+    for (var i = 0; i < 10; i++) {
       ints.add(i);
     }
     return ListView(
       padding: const EdgeInsets.all(20),
       children: <Widget>[
         for (var item in ints)
-        Container(
-          height: 50,
-          color: Colors.amber[600],
-          child: const Center(child: Text('Entry A')),
-        ),
+          ListTile(
+            onTap: () {
+              get();
+            },
+            title: const Text('Entry A'),
+          ),
         Container(
           height: 50,
           color: Colors.amber[500],

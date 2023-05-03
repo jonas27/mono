@@ -1,0 +1,35 @@
+syntax = "proto3";
+package vocab;
+option go_package = ".;proto";
+
+message VocabAdditional {
+  string info = 1;
+}
+
+message Vocab {
+  string word = 1;
+  string description = 2;
+  string translation = 3;
+  repeated string info = 4;
+}
+
+message VocabListResponse {
+  repeated Vocab vocab = 1;
+  int32 total_count = 2;
+}
+
+message VocabListRequest {
+  int32 page_number = 1;
+  int32 page_size = 2;
+  optional Pagination pagination = 3;
+}
+
+message Pagination {
+  int32 start = 1;
+  int32 end = 2;
+  int32 results_per_page = 3;
+}
+
+service VocabService {
+  rpc ListVocabs(VocabListRequest) returns (stream VocabListResponse);
+}

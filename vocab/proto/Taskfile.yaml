@@ -1,0 +1,10 @@
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task --list-all --silent
+
+  proto:
+    cmds:
+      - protoc --dart_out=grpc:../frontend/lib/proto/ --grpc-web_out=import_style=commonjs+dts,mode=grpcweb:../frontend/lib/proto/  --go-grpc_out=../backend/proto/ --go_out=../backend/proto/ --experimental_allow_proto3_optional vocab.proto
