@@ -93,12 +93,12 @@ func run(ctx context.Context, log *slog.Logger, c *cli.Context) error {
 		return fmt.Errorf("failed to ensure file exists: %w", err)
 	}
 
-	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0644)
+	f, err := os.OpenFile(path, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
 	if err != nil {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
 	defer f.Close()
-	writeToFile(c.Command.Name, f)
+	writeLineToFile(c.Command.Name, f)
 	return nil
 }
 
@@ -107,7 +107,7 @@ func ensureDir(log *slog.Logger, file string) error {
 	dir := filepath.Dir(file)
 	if _, err := os.Stat(dir); os.IsNotExist(err) {
 		log.Debug("create dir", "file", file)
-		if err = os.MkdirAll(dir, 0755); err != nil {
+		if err = os.MkdirAll(dir, 0o755); err != nil {
 			return fmt.Errorf("failed to create directory: %w", err)
 		}
 	}
@@ -122,14 +122,26 @@ func ensureFile(log *slog.Logger, file string) error {
 		if _, err = os.Create(file); err != nil {
 			return fmt.Errorf("failed to create file: %w", err)
 		}
+		f, err := os.OpenFile(file, os.O_APPEND|os.O_CREATE|os.O_WRONLY, 0o644)
+		if err != nil {
+			return fmt.Errorf("failed to open file: %w", err)
+		}
+		defer f.Close()
+		writeLineToFile("log-type,time, unix-timestamp", f)
 	}
 	log.Debug("file exists", "file", file)
 	return nil
 }
 
-func writeToFile(method string, file *os.File) error {
-	time := time.Now().Unix()
-	line := fmt.Sprintf("%s,%d\n", method, time)
+func addEntryToFile(method string, file *os.File) error {
+	timestamp := time.Now().Unix()
+	t := time.Now().Format(time.RFC3339)
+
+	line := fmt.Sprintf("%s,%s,%d\n", method, t, timestamp)
+	return writeLineToFile(line, file)
+}
+
+func writeLineToFile(line string, file *os.File) error {
 	if _, err := file.WriteString(line); err != nil {
 		return fmt.Errorf("failed to write to file: %w", err)
 	}
