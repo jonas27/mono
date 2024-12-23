@@ -98,7 +98,7 @@ func run(ctx context.Context, log *slog.Logger, c *cli.Context) error {
 		return fmt.Errorf("failed to open file: %w", err)
 	}
 	defer f.Close()
-	writeLineToFile(c.Command.Name, f)
+	addEntryToFile(c.Command.Name, f)
 	return nil
 }
 
@@ -127,7 +127,7 @@ func ensureFile(log *slog.Logger, file string) error {
 			return fmt.Errorf("failed to open file: %w", err)
 		}
 		defer f.Close()
-		writeLineToFile("log-type,time, unix-timestamp", f)
+		writeLineToFile("type,time,unix-timestamp\n", f)
 	}
 	log.Debug("file exists", "file", file)
 	return nil
