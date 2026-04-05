@@ -1,0 +1,99 @@
+version: "2"
+
+run:
+  build-tags:
+    - unit
+    - integration
+    - e2e
+  allow-parallel-runners: true
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - copyloopvar
+    - dupl
+    - errcheck
+    - fatcontext
+    - goconst
+    - gocheckcompilerdirectives
+    - gocritic
+    - gocyclo
+    - godoclint
+    - gosec
+    - govet
+    - iface
+    - importas
+    - ineffassign
+    - intrange
+    - iotamixing
+    - lll
+    - loggercheck
+    - misspell
+    - modernize
+    - musttag
+    - nakedret
+    - nilnesserr
+    - nosprintfhostport
+    - perfsprint
+    - revive
+    - staticcheck
+    - testifylint
+    - unconvert
+    - unparam
+    - unused
+    - usetesting
+    - whitespace
+  settings:
+    gocritic:
+      disabled-checks:
+        - appendAssign
+        - ifElseChain
+    gosec:
+      excludes:
+        - G115 # integer overflow conversion
+    iface:
+      enable:
+        - identical
+    importas:
+      alias: []
+    lll:
+      line-length: 130
+    loggercheck:
+      require-string-key: true
+      no-printf-like: true
+    testifylint:
+      enable:
+        - suite-thelper
+      disable:
+        - error-is-as
+        - float-compare
+    usetesting:
+      context-background: true
+      context-todo: true
+      os-temp-dir: true
+
+  exclusions:
+    rules:
+      - path: _test\.go
+        text: 'dot-imports: should not use dot imports'
+      - linters:
+          - dupl
+          - goconst
+          - lll
+        path: _test\.go
+      - linters:
+          - revive
+        text: ^(exported|package-comments)
+
+formatters:
+  enable:
+    - gci
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/jmanser/gospoti)
