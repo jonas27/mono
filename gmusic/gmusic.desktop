@@ -1,0 +1,9 @@
+[Desktop Entry]
+Type=Application
+Name=gmusic
+Comment=Terminal music player
+Exec=alacritty --class gmusic,gmusic -e GMUSIC_BIN
+Icon=gmusic
+Terminal=false
+Categories=AudioVideo;Audio;Player;
+StartupWMClass=gmusic
