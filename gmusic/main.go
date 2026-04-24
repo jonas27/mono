@@ -384,10 +384,10 @@ func (m model) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 			m.p.PlayPause()
 
 		case "+", "=":
-			m.p.SetVolume(m.p.Volume() + 5)
+			m.p.Seek(15 * time.Second)
 
 		case "-":
-			m.p.SetVolume(m.p.Volume() - 5)
+			m.p.Seek(-15 * time.Second)
 
 		case "a":
 			if m.currentTrack != "" {
@@ -552,11 +552,11 @@ func (m model) renderHelp() string {
 	var hint string
 	switch {
 	case m.inDrill[m.activeTab]:
-		hint = "enter:play  esc:back  space:pause  +/-:volume  s:stats  q:quit"
+		hint = "enter:play  esc:back  space:pause  +/-:seek15s  s:stats  q:quit"
 	case m.activeTab == tabPlaylist:
-		hint = "enter:play  d:remove  space:pause  +/-:volume  tab:switch  s:stats  q:quit"
+		hint = "enter:play  d:remove  space:pause  +/-:seek15s  tab:switch  s:stats  q:quit"
 	default:
-		hint = "enter:play  space:pause  +/-:volume  tab:switch  /:filter  a:playlist  s:stats  q:quit"
+		hint = "enter:play  space:pause  +/-:seek15s  tab:switch  /:filter  a:playlist  s:stats  q:quit"
 	}
 	parts := []string{hint}
 	return helpStyle.Render(parts[0])
@@ -617,10 +617,6 @@ func (m model) nowPlayingView(width int) string {
 	// Progress bar
 	sb.WriteString(m.progress.View() + "\n\n")
 
-	// Volume
-	vol := m.p.Volume()
-	sb.WriteString(lipgloss.NewStyle().Foreground(gray).Render("Vol: ") + volumeBar(vol, width-10) + "\n")
-
 	// Stats
 	if m.showStats {
 		dimStyle := lipgloss.NewStyle().Foreground(gray)
@@ -631,17 +627,6 @@ func (m model) nowPlayingView(width int) string {
 	}
 
 	return sb.String()
-}
-
-func volumeBar(vol, width int) string {
-	if width <= 0 {
-		width = 10
-	}
-	filled := vol * width / 100
-	bar := strings.Repeat("█", filled) + strings.Repeat("░", width-filled)
-	pct := fmt.Sprintf(" %3d%%", vol)
-	return lipgloss.NewStyle().Foreground(purple).Render(bar) +
-		lipgloss.NewStyle().Foreground(gray).Render(pct)
 }
 
 func fmtDuration(d time.Duration) string {

@@ -38,7 +38,7 @@ type Player struct {
 
 func New() *Player {
 	return &Player{
-		volume: 80,
+		volume: 100,
 		state:  StateStopped,
 	}
 }
@@ -238,4 +238,26 @@ func (p *Player) Duration() time.Duration {
 		return 0
 	}
 	return p.format.SampleRate.D(p.streamer.Len())
+}
+
+func (p *Player) Seek(offset time.Duration) {
+	p.mu.Lock()
+	defer p.mu.Unlock()
+
+	if p.streamer == nil {
+		return
+	}
+
+	samples := p.format.SampleRate.N(offset)
+	pos := p.streamer.Position() + samples
+	if pos < 0 {
+		pos = 0
+	}
+	if max := p.streamer.Len(); pos > max {
+		pos = max
+	}
+
+	speaker.Lock()
+	p.streamer.Seek(pos)
+	speaker.Unlock()
 }
