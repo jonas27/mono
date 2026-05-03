@@ -1,0 +1,58 @@
+version: "2"
+
+run:
+  allow-parallel-runners: true
+
+linters:
+  default: none
+  enable:
+    - bodyclose
+    - copyloopvar
+    - errcheck
+    - fatcontext
+    - gocritic
+    - gocyclo
+    - gosec
+    - govet
+    - ineffassign
+    - intrange
+    - misspell
+    - modernize
+    - perfsprint
+    - revive
+    - staticcheck
+    - unconvert
+    - unparam
+    - unused
+    - whitespace
+  settings:
+    gocritic:
+      disabled-checks:
+        - appendAssign
+        - ifElseChain
+    gosec:
+      excludes:
+        - G115 # integer overflow conversion
+    lll:
+      line-length: 130
+
+  exclusions:
+    rules:
+      - linters:
+          - errcheck
+        source: "fmt\\.Print"
+      - linters:
+          - revive
+        text: ^(exported|package-comments)
+
+formatters:
+  enable:
+    - gci
+    - gofumpt
+    - goimports
+  settings:
+    gci:
+      sections:
+        - standard
+        - default
+        - prefix(github.com/jmanser/gotiz)
