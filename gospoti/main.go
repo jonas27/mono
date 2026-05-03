@@ -29,6 +29,7 @@ func run() error {
 		flagLang    = flag.String("lang", "en", "en|bg|es")
 		flagSetup   = flag.Bool("setup", false, "configure API keys interactively")
 		flagArtist  = flag.String("artist", "", "override artist name for all downloads")
+		flagAlbum   = flag.String("album", "", "override album name for all downloads")
 	)
 
 	flag.Parse()
@@ -94,6 +95,7 @@ func run() error {
 		outDir,
 		quality,
 		*flagArtist,
+		*flagAlbum,
 		langCode,
 		toolPaths.YTDlp,
 		toolPaths.FFmpeg,

@@ -26,6 +26,7 @@ type Downloader struct {
 	genius         *GeniusClient
 	outDir         string
 	overrideArtist string
+	overrideAlbum  string
 	lang           lang.Code
 }
 
@@ -33,7 +34,7 @@ type Downloader struct {
 // spotifySecret are both non-empty. ytdlpPath and ffmpegPath are the resolved paths to the
 // yt-dlp and ffmpeg binaries.
 func New(
-	spotifyID, spotifySecret, geniusToken, outDir, quality, overrideArtist string,
+	spotifyID, spotifySecret, geniusToken, outDir, quality, overrideArtist, overrideAlbum string,
 	language lang.Code,
 	ytdlpPath, ffmpegPath string,
 ) (*Downloader, error) {
@@ -41,6 +42,7 @@ func New(
 		ytdlp:          NewYTDLPRunner(quality, ytdlpPath, ffmpegPath),
 		outDir:         outDir,
 		overrideArtist: overrideArtist,
+		overrideAlbum:  overrideAlbum,
 		lang:           language,
 	}
 
@@ -182,6 +184,35 @@ func (d *Downloader) fetchSpotifyTracks(ctx context.Context, rawURL string) ([]T
 
 		return append(tracks, *spotifyTrackToMeta(t)), "songs", nil
 
+	case strings.Contains(rawURL, "/show/"):
+		id := spotifyIDFromURL(rawURL)
+		if id == "" {
+			return nil, "", fmt.Errorf("could not parse Spotify show ID from URL: %s", rawURL)
+		}
+
+		show, err := d.spotify.GetShow(ctx, spotify.ID(id))
+		if err != nil {
+			return nil, "", fmt.Errorf("get Spotify show: %w", err)
+		}
+
+		page := &show.Episodes
+		pos := 1
+		for {
+			for i := range page.Episodes {
+				meta := episodeToMeta(&page.Episodes[i], &show.SimpleShow)
+				meta.TrackNumber = pos
+				pos++
+				tracks = append(tracks, *meta)
+			}
+			if err := d.spotify.NextPage(ctx, page); err == spotify.ErrNoMorePages {
+				break
+			} else if err != nil {
+				return nil, "", fmt.Errorf("paginate Spotify show: %w", err)
+			}
+		}
+
+		return tracks, show.Name, nil
+
 	default:
 		return nil, "", fmt.Errorf("unrecognised Spotify URL: %s", rawURL)
 	}
@@ -191,6 +222,10 @@ func (d *Downloader) fetchSpotifyTracks(ctx context.Context, rawURL string) ([]T
 func (d *Downloader) downloadTrack(ctx context.Context, outDir string, meta TrackMeta) error {
 	if d.overrideArtist != "" {
 		meta.Artist = d.overrideArtist
+	}
+
+	if d.overrideAlbum != "" {
+		meta.Album = d.overrideAlbum
 	}
 
 	logName := meta.Artist + " - " + meta.Title
@@ -209,9 +244,24 @@ func (d *Downloader) downloadTrack(ctx context.Context, outDir string, meta Trac
 
 	searchQuery := meta.Artist + " - " + meta.Title + " audio"
 
-	if err := d.ytdlp.DownloadSearch(ctx, searchQuery, outPath); err != nil {
-		_ = os.Remove(outPath)
+	// Download to a temp path so yt-dlp's own filename sanitization cannot cause
+	// a mismatch between the path we pass and the file it actually writes.
+	tmpFile, err := os.CreateTemp(outDir, "dl-*.mp3")
+	if err != nil {
+		return fmt.Errorf("create temp file: %w", err)
+	}
+	tmpPath := tmpFile.Name()
+	_ = tmpFile.Close()
+	_ = os.Remove(tmpPath)
+
+	if err := d.ytdlp.DownloadSearch(ctx, searchQuery, tmpPath); err != nil {
+		_ = os.Remove(tmpPath)
 		return err
+	}
+
+	if err := os.Rename(tmpPath, outPath); err != nil {
+		_ = os.Remove(tmpPath)
+		return fmt.Errorf("rename download to %s: %w", outPath, err)
 	}
 
 	if err := d.writeFullMeta(ctx, outPath, meta); err != nil {
@@ -281,11 +331,29 @@ func simpleTrackToMeta(t *spotify.SimpleTrack, album *spotify.SimpleAlbum) *Trac
 	}
 }
 
+// episodeToMeta converts a Spotify EpisodePage and its show into a TrackMeta.
+func episodeToMeta(e *spotify.EpisodePage, show *spotify.SimpleShow) *TrackMeta {
+	coverURL := ""
+	if len(e.Images) > 0 {
+		coverURL = e.Images[0].URL
+	} else if len(show.Images) > 0 {
+		coverURL = show.Images[0].URL
+	}
+
+	return &TrackMeta{
+		Title:       e.Name,
+		Artist:      show.Publisher,
+		Album:       show.Name,
+		ReleaseDate: e.ReleaseDate,
+		CoverURL:    coverURL,
+	}
+}
+
 // spotifyIDFromURL extracts the Spotify resource ID from a Spotify URL.
 func spotifyIDFromURL(rawURL string) string {
 	parts := strings.Split(rawURL, "/")
 	for i, p := range parts {
-		if (p == "track" || p == "playlist" || p == "album") && i+1 < len(parts) {
+		if (p == "track" || p == "playlist" || p == "album" || p == "show") && i+1 < len(parts) {
 			id := parts[i+1]
 			// Remove any query string.
 			id = strings.SplitN(id, "?", 2)[0]
@@ -321,5 +389,5 @@ func cleanFilename(name string) string {
 		}
 	}
 
-	return strings.TrimSpace(b.String())
+	return strings.Join(strings.Fields(b.String()), " ")
 }
