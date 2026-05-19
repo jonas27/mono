@@ -1,15 +1,15 @@
-// Package player handles Spotify auth and streams audio to PCM files.
+// Package player handles Spotify auth and streams audio to MP3 files.
 package player
 
 import (
 	"context"
 	"crypto/rand"
-	"encoding/binary"
 	"encoding/hex"
 	"fmt"
 	"io"
 	"net/http"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -91,7 +91,7 @@ func New(c *creds.Creds, credsFile string) (*Session, error) {
 	return &Session{sess: sess, countryCode: cc}, nil
 }
 
-// Run streams the Spotify URL or URI, writing f32le PCM files into outDir.
+// Run streams the Spotify URL or URI, writing MP3 files into outDir.
 // Albums and playlists create a subdirectory named after the album/playlist (or
 // albumOverride if non-empty). Tracks write directly into outDir.
 func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride string) error {
@@ -204,7 +204,7 @@ func (s *Session) streamTrackWithRetry(ctx context.Context, id librespot.Spotify
 	return err
 }
 
-// streamTrack streams one track to a PCM file inside dir.
+// streamTrack streams one track to an MP3 file inside dir.
 // pos > 0 prefixes the filename with a zero-padded track number.
 func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir string, pos int) error {
 	fifoPath := filepath.Join(dir, ".fifo-"+randomHex(8))
@@ -251,21 +251,16 @@ func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir s
 
 	s.downloadCover(ctx, dir, stream)
 	finalPath := filepath.Join(dir, trackFilename(stream, pos))
-	tmpWAV := finalPath + ".tmp"
+	tmpMP3 := finalPath + ".tmp"
+
+	meta := streamTrackMeta(stream)
 
 	copyDone := make(chan error, 1)
 	go func() {
-		f, err := os.Create(tmpWAV)
-		if err != nil {
-			_ = reader.Close()
-			copyDone <- err
-			return
-		}
-		err = writeWAV(f, reader)
-		_ = f.Close()
+		err := encodeMP3(tmpMP3, reader, meta)
 		_ = reader.Close()
 		if err != nil {
-			_ = os.Remove(tmpWAV)
+			_ = os.Remove(tmpMP3)
 		}
 		copyDone <- err
 	}()
@@ -273,13 +268,13 @@ func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir s
 	if err := pl.SetPrimaryStream(stream.Source, false, false); err != nil {
 		pl.Close()
 		<-copyDone
-		_ = os.Remove(tmpWAV)
+		_ = os.Remove(tmpMP3)
 		return fmt.Errorf("set stream: %w", err)
 	}
 	if err := pl.Play(); err != nil {
 		pl.Close()
 		<-copyDone
-		_ = os.Remove(tmpWAV)
+		_ = os.Remove(tmpMP3)
 		return fmt.Errorf("play: %w", err)
 	}
 
@@ -290,16 +285,16 @@ func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir s
 		case <-ctx.Done():
 			pl.Close()
 			<-copyDone
-			_ = os.Remove(tmpWAV)
+			_ = os.Remove(tmpMP3)
 			return ctx.Err()
 		case ev, ok := <-events:
 			if !ok || ev.Type == lsplayer.EventTypeStop || ev.Type == lsplayer.EventTypeNotPlaying {
 				pl.Close()
 				if err := <-copyDone; err != nil {
-					_ = os.Remove(tmpWAV)
+					_ = os.Remove(tmpMP3)
 					return err
 				}
-				return os.Rename(tmpWAV, finalPath)
+				return os.Rename(tmpMP3, finalPath)
 			}
 		}
 	}
@@ -321,7 +316,7 @@ func contextDirName(r *spclient.ContextResolver) string {
 	return safeFilename(parts[len(parts)-1])
 }
 
-// trackFilename builds "01 - Artist - Title.pcm" (or "Artist - Title.pcm" when pos==0).
+// trackFilename builds "01 - Artist - Title.mp3" (or "Artist - Title.mp3" when pos==0).
 func trackFilename(stream *lsplayer.Stream, pos int) string {
 	title := stream.Media.Name()
 	artist := ""
@@ -335,7 +330,7 @@ func trackFilename(stream *lsplayer.Stream, pos int) string {
 	if pos > 0 {
 		name = fmt.Sprintf("%02d - %s", pos, name)
 	}
-	return safeFilename(name) + ".wav"
+	return safeFilename(name) + ".mp3"
 }
 
 // downloadCover saves cover.jpg in dir from the track's album art (no-op if already exists).
@@ -388,47 +383,53 @@ func (s *Session) downloadCover(ctx context.Context, dir string, stream *lsplaye
 	_, _ = io.Copy(f, resp.Body)
 }
 
-// writeWAV writes a WAV file (IEEE float 32-bit, 44100 Hz, stereo) from r into w.
-func writeWAV(w *os.File, r io.Reader) error {
-	const (
-		sampleRate    = 44100
-		channels      = 2
-		bitsPerSample = 32
-		byteRate      = sampleRate * channels * bitsPerSample / 8
-		blockAlign    = channels * bitsPerSample / 8
-		hdrSize       = 44
-	)
+type trackMeta struct {
+	Title  string
+	Artist string
+	Album  string
+}
 
-	// Reserve space for the header; fill it in after we know the data size.
-	if _, err := w.Write(make([]byte, hdrSize)); err != nil {
-		return err
+func streamTrackMeta(stream *lsplayer.Stream) trackMeta {
+	m := trackMeta{Title: stream.Media.Name()}
+	if stream.Media.IsTrack() {
+		t := stream.Media.Track()
+		if len(t.GetArtist()) > 0 {
+			m.Artist = t.GetArtist()[0].GetName()
+		}
+		if alb := t.GetAlbum(); alb != nil {
+			m.Album = alb.GetName()
+		}
 	}
+	return m
+}
 
-	n, err := io.Copy(w, r)
-	if err != nil {
-		return err
+// encodeMP3 encodes f32le PCM from r into an MP3 file at path using ffmpeg,
+// embedding ID3 tags from meta.
+func encodeMP3(path string, r io.Reader, meta trackMeta) error {
+	args := []string{
+		"-hide_banner",
+		"-loglevel", "error",
+		"-f", "f32le",
+		"-ar", "44100",
+		"-ac", "2",
+		"-i", "pipe:0",
+		"-b:a", "320k",
 	}
-
-	if _, err := w.Seek(0, io.SeekStart); err != nil {
-		return err
+	if meta.Title != "" {
+		args = append(args, "-metadata", "title="+meta.Title)
 	}
+	if meta.Artist != "" {
+		args = append(args, "-metadata", "artist="+meta.Artist)
+	}
+	if meta.Album != "" {
+		args = append(args, "-metadata", "album="+meta.Album)
+	}
+	args = append(args, "-f", "mp3", "-y", path)
 
-	var buf [hdrSize]byte
-	copy(buf[0:], "RIFF")
-	binary.LittleEndian.PutUint32(buf[4:], uint32(36+n))
-	copy(buf[8:], "WAVE")
-	copy(buf[12:], "fmt ")
-	binary.LittleEndian.PutUint32(buf[16:], 16)
-	binary.LittleEndian.PutUint16(buf[20:], 3) // WAVE_FORMAT_IEEE_FLOAT
-	binary.LittleEndian.PutUint16(buf[22:], channels)
-	binary.LittleEndian.PutUint32(buf[24:], sampleRate)
-	binary.LittleEndian.PutUint32(buf[28:], byteRate)
-	binary.LittleEndian.PutUint16(buf[32:], blockAlign)
-	binary.LittleEndian.PutUint16(buf[34:], bitsPerSample)
-	copy(buf[36:], "data")
-	binary.LittleEndian.PutUint32(buf[40:], uint32(n))
-	_, err = w.Write(buf[:])
-	return err
+	cmd := exec.Command("ffmpeg", args...)
+	cmd.Stdin = r
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }
 
 // toURI converts an open.spotify.com URL to a spotify: URI.
@@ -449,7 +450,7 @@ func toURI(s string) string {
 	return s
 }
 
-// safeFilename strips characters that are unsafe in filenames.
+// safeFilename strips characters that are unsafe in filenames and replaces spaces with underscores.
 func safeFilename(s string) string {
 	var b strings.Builder
 	for _, r := range s {
@@ -457,7 +458,7 @@ func safeFilename(s string) string {
 			b.WriteRune(r)
 		}
 	}
-	return strings.Join(strings.Fields(b.String()), " ")
+	return strings.Join(strings.Fields(b.String()), "_")
 }
 
 func randomHex(n int) string {

@@ -458,6 +458,7 @@ func (m *model) drillBack() {
 func (m *model) playFile(path string) tea.Cmd {
 	done := make(chan struct{})
 	if err := m.p.Load(path, func() { close(done) }); err != nil {
+		fmt.Fprintf(os.Stderr, "load error: %v\n", err)
 		return nil
 	}
 	m.currentTrack = path

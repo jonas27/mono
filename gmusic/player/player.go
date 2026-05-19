@@ -88,8 +88,10 @@ func (p *Player) Load(path string, onDone func()) error {
 		return fmt.Errorf("decode: %w", err)
 	}
 
-	// Initialize speaker if needed
-	speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10))
+	if err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10)); err != nil {
+		streamer.Close()
+		return fmt.Errorf("speaker init: %w", err)
+	}
 
 	p.streamer = streamer
 	p.format = format

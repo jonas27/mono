@@ -1,7 +1,7 @@
 .PHONY: build lint clean
 
 build:
-	CGO_ENABLED=0 go build -mod=vendor -o spotigo .
+	CGO_ENABLED=0 go build -o spotigo .
 
 lint:
 	golangci-lint run ./...
