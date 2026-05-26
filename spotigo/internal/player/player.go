@@ -251,16 +251,16 @@ func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir s
 
 	s.downloadCover(ctx, dir, stream)
 	finalPath := filepath.Join(dir, trackFilename(stream, pos))
-	tmpMP3 := finalPath + ".tmp"
+	tmpOpus := finalPath + ".tmp"
 
 	meta := streamTrackMeta(stream)
 
 	copyDone := make(chan error, 1)
 	go func() {
-		err := encodeMP3(tmpMP3, reader, meta)
+		err := encodeOpus(tmpOpus, reader, meta)
 		_ = reader.Close()
 		if err != nil {
-			_ = os.Remove(tmpMP3)
+			_ = os.Remove(tmpOpus)
 		}
 		copyDone <- err
 	}()
@@ -268,13 +268,13 @@ func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir s
 	if err := pl.SetPrimaryStream(stream.Source, false, false); err != nil {
 		pl.Close()
 		<-copyDone
-		_ = os.Remove(tmpMP3)
+		_ = os.Remove(tmpOpus)
 		return fmt.Errorf("set stream: %w", err)
 	}
 	if err := pl.Play(); err != nil {
 		pl.Close()
 		<-copyDone
-		_ = os.Remove(tmpMP3)
+		_ = os.Remove(tmpOpus)
 		return fmt.Errorf("play: %w", err)
 	}
 
@@ -285,16 +285,16 @@ func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir s
 		case <-ctx.Done():
 			pl.Close()
 			<-copyDone
-			_ = os.Remove(tmpMP3)
+			_ = os.Remove(tmpOpus)
 			return ctx.Err()
 		case ev, ok := <-events:
 			if !ok || ev.Type == lsplayer.EventTypeStop || ev.Type == lsplayer.EventTypeNotPlaying {
 				pl.Close()
 				if err := <-copyDone; err != nil {
-					_ = os.Remove(tmpMP3)
+					_ = os.Remove(tmpOpus)
 					return err
 				}
-				return os.Rename(tmpMP3, finalPath)
+				return os.Rename(tmpOpus, finalPath)
 			}
 		}
 	}
@@ -316,7 +316,7 @@ func contextDirName(r *spclient.ContextResolver) string {
 	return safeFilename(parts[len(parts)-1])
 }
 
-// trackFilename builds "01 - Artist - Title.mp3" (or "Artist - Title.mp3" when pos==0).
+// trackFilename builds "01 - Artist - Title.opus" (or "Artist - Title.opus" when pos==0).
 func trackFilename(stream *lsplayer.Stream, pos int) string {
 	title := stream.Media.Name()
 	artist := ""
@@ -330,7 +330,7 @@ func trackFilename(stream *lsplayer.Stream, pos int) string {
 	if pos > 0 {
 		name = fmt.Sprintf("%02d - %s", pos, name)
 	}
-	return safeFilename(name) + ".mp3"
+	return safeFilename(name) + ".opus"
 }
 
 // downloadCover saves cover.jpg in dir from the track's album art (no-op if already exists).
@@ -403,9 +403,9 @@ func streamTrackMeta(stream *lsplayer.Stream) trackMeta {
 	return m
 }
 
-// encodeMP3 encodes f32le PCM from r into an MP3 file at path using ffmpeg,
-// embedding ID3 tags from meta.
-func encodeMP3(path string, r io.Reader, meta trackMeta) error {
+// encodeOpus encodes f32le PCM from r into an Opus file at path using ffmpeg,
+// embedding tags from meta.
+func encodeOpus(path string, r io.Reader, meta trackMeta) error {
 	args := []string{
 		"-hide_banner",
 		"-loglevel", "error",
@@ -413,7 +413,8 @@ func encodeMP3(path string, r io.Reader, meta trackMeta) error {
 		"-ar", "44100",
 		"-ac", "2",
 		"-i", "pipe:0",
-		"-b:a", "320k",
+		"-c:a", "libopus",
+		"-b:a", "64k",
 	}
 	if meta.Title != "" {
 		args = append(args, "-metadata", "title="+meta.Title)
@@ -424,7 +425,7 @@ func encodeMP3(path string, r io.Reader, meta trackMeta) error {
 	if meta.Album != "" {
 		args = append(args, "-metadata", "album="+meta.Album)
 	}
-	args = append(args, "-f", "mp3", "-y", path)
+	args = append(args, "-f", "ogg", "-y", path)
 
 	cmd := exec.Command("ffmpeg", args...)
 	cmd.Stdin = r

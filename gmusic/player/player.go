@@ -25,15 +25,17 @@ const (
 )
 
 type Player struct {
-	mu       sync.Mutex
-	state    State
-	ctrl     *beep.Ctrl
-	vol      *effects.Volume
-	streamer beep.StreamSeekCloser
-	format   beep.Format
-	volume   int // 0-100
-	onDone   func()
-	done     chan struct{}
+	mu          sync.Mutex
+	state       State
+	ctrl        *beep.Ctrl
+	vol         *effects.Volume
+	streamer    beep.StreamSeekCloser
+	format      beep.Format
+	volume      int // 0-100
+	onDone      func()
+	done        chan struct{}
+	speakerRate beep.SampleRate
+	speakerOnce sync.Once
 }
 
 func New() *Player {
@@ -88,9 +90,14 @@ func (p *Player) Load(path string, onDone func()) error {
 		return fmt.Errorf("decode: %w", err)
 	}
 
-	if err = speaker.Init(format.SampleRate, format.SampleRate.N(time.Second/10)); err != nil {
+	var speakerErr error
+	p.speakerOnce.Do(func() {
+		p.speakerRate = format.SampleRate
+		speakerErr = speaker.Init(p.speakerRate, p.speakerRate.N(time.Second/10))
+	})
+	if speakerErr != nil {
 		streamer.Close()
-		return fmt.Errorf("speaker init: %w", err)
+		return fmt.Errorf("speaker init: %w", speakerErr)
 	}
 
 	p.streamer = streamer
@@ -99,7 +106,7 @@ func (p *Player) Load(path string, onDone func()) error {
 	p.done = make(chan struct{})
 	p.state = StatePlaying
 
-	resampled := beep.Resample(4, format.SampleRate, format.SampleRate, streamer)
+	resampled := beep.Resample(4, format.SampleRate, p.speakerRate, streamer)
 
 	p.ctrl = &beep.Ctrl{Streamer: resampled, Paused: false}
 	p.vol = &effects.Volume{
