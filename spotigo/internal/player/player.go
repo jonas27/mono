@@ -112,14 +112,36 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride strin
 		if err := os.MkdirAll(outDir, 0o750); err != nil {
 			return err
 		}
-		return s.streamTrack(ctx, *id, outDir, 0)
+		res, err := s.streamDownload(ctx, *id, outDir, 0)
+		if err != nil {
+			return err
+		}
+		return res.complete()
 
 	default: // album, playlist, show, …
 		return s.streamContext(ctx, uri, outDir, albumOverride)
 	}
 }
 
+// encodeResult holds a background encode that is still running.
+type encodeResult struct {
+	tmpPath   string
+	finalPath string
+	done      chan error
+}
+
+// complete waits for the background encode and atomically renames the file.
+func (r *encodeResult) complete() error {
+	err := <-r.done
+	if err != nil {
+		_ = os.Remove(r.tmpPath)
+		return err
+	}
+	return os.Rename(r.tmpPath, r.finalPath)
+}
+
 // streamContext resolves an album/playlist and streams every track.
+// Downloads are pipelined: track N+1 begins downloading while track N encodes.
 func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride string) error {
 	spotCtx, err := s.sess.Spclient().ContextResolve(ctx, uri)
 	if err != nil {
@@ -162,9 +184,10 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride 
 
 	fmt.Printf("Found %d tracks → %s\n", len(trackURIs), dir)
 
+	var pending *encodeResult
 	for i, trackURI := range trackURIs {
 		if ctx.Err() != nil {
-			return ctx.Err()
+			break
 		}
 		p := strings.SplitN(trackURI, ":", 3)
 		if len(p) != 3 {
@@ -175,17 +198,39 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride 
 			fmt.Fprintf(os.Stderr, "skip %s: %v\n", trackURI, err)
 			continue
 		}
-		if err := s.streamTrackWithRetry(ctx, *id, dir, i+1); err != nil {
-			fmt.Fprintf(os.Stderr, "error: track %d: %v\n", i+1, err)
+
+		// Start the next download; this blocks only until the player finishes
+		// writing PCM — the encode runs in a goroutine behind it.
+		res, dlErr := s.streamDownloadWithRetry(ctx, *id, dir, i+1)
+
+		// The previous encode ran concurrently with this download; collect it now.
+		if pending != nil {
+			if encErr := pending.complete(); encErr != nil {
+				fmt.Fprintf(os.Stderr, "error: encode: %v\n", encErr)
+			}
+			pending = nil
+		}
+
+		if dlErr != nil {
+			fmt.Fprintf(os.Stderr, "error: track %d: %v\n", i+1, dlErr)
+			continue
+		}
+		pending = res
+	}
+
+	// Wait for the last encode.
+	if pending != nil {
+		if err := pending.complete(); err != nil {
+			fmt.Fprintf(os.Stderr, "error: encode last track: %v\n", err)
 		}
 	}
 
 	return nil
 }
 
-func (s *Session) streamTrackWithRetry(ctx context.Context, id librespot.SpotifyId, dir string, pos int) error {
+func (s *Session) streamDownloadWithRetry(ctx context.Context, id librespot.SpotifyId, dir string, pos int) (*encodeResult, error) {
 	delays := []time.Duration{20 * time.Second, 40 * time.Second, 60 * time.Second}
-	err := s.streamTrack(ctx, id, dir, pos)
+	res, err := s.streamDownload(ctx, id, dir, pos)
 	for i, d := range delays {
 		if err == nil || ctx.Err() != nil {
 			break
@@ -196,31 +241,34 @@ func (s *Session) streamTrackWithRetry(ctx context.Context, id librespot.Spotify
 		fmt.Fprintf(os.Stderr, "audio key rate-limited, retrying track %d in %s (attempt %d/4)\n", pos, d, i+2)
 		select {
 		case <-ctx.Done():
-			return ctx.Err()
+			return nil, ctx.Err()
 		case <-time.After(d):
 		}
-		err = s.streamTrack(ctx, id, dir, pos)
+		res, err = s.streamDownload(ctx, id, dir, pos)
 	}
-	return err
+	return res, err
 }
 
-// streamTrack streams one track to an MP3 file inside dir.
+// streamDownload streams one track's audio from Spotify into a FIFO and
+// launches ffmpeg encoding in a goroutine. It returns as soon as the player
+// has finished writing PCM (i.e. the download phase is done); the caller
+// must call encodeResult.complete() to wait for the encode to finish.
 // pos > 0 prefixes the filename with a zero-padded track number.
-func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir string, pos int) error {
+func (s *Session) streamDownload(ctx context.Context, id librespot.SpotifyId, dir string, pos int) (*encodeResult, error) {
 	fifoPath := filepath.Join(dir, ".fifo-"+randomHex(8))
 	if err := syscall.Mkfifo(fifoPath, 0o600); err != nil {
-		return fmt.Errorf("create fifo: %w", err)
+		return nil, fmt.Errorf("create fifo: %w", err)
 	}
 	defer os.Remove(fifoPath)
 
 	// Open read end non-blocking so the player's O_WRONLY|O_NONBLOCK open succeeds.
 	rfd, err := syscall.Open(fifoPath, syscall.O_RDONLY|syscall.O_NONBLOCK, 0)
 	if err != nil {
-		return fmt.Errorf("open fifo: %w", err)
+		return nil, fmt.Errorf("open fifo: %w", err)
 	}
 	if err := syscall.SetNonblock(rfd, false); err != nil {
 		_ = syscall.Close(rfd)
-		return fmt.Errorf("set blocking: %w", err)
+		return nil, fmt.Errorf("set blocking: %w", err)
 	}
 	reader := os.NewFile(uintptr(rfd), fifoPath)
 
@@ -237,7 +285,7 @@ func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir s
 	})
 	if err != nil {
 		_ = reader.Close()
-		return fmt.Errorf("create player: %w", err)
+		return nil, fmt.Errorf("create player: %w", err)
 	}
 
 	events := pl.Receive()
@@ -246,55 +294,48 @@ func (s *Session) streamTrack(ctx context.Context, id librespot.SpotifyId, dir s
 	if err != nil {
 		_ = reader.Close()
 		pl.Close()
-		return fmt.Errorf("load stream: %w", err)
+		return nil, fmt.Errorf("load stream: %w", err)
 	}
 
 	s.downloadCover(ctx, dir, stream)
 	finalPath := filepath.Join(dir, trackFilename(stream, pos))
 	tmpOpus := finalPath + ".tmp"
-
 	meta := streamTrackMeta(stream)
 
-	copyDone := make(chan error, 1)
+	encDone := make(chan error, 1)
 	go func() {
 		err := encodeOpus(tmpOpus, reader, meta)
 		_ = reader.Close()
 		if err != nil {
 			_ = os.Remove(tmpOpus)
 		}
-		copyDone <- err
+		encDone <- err
 	}()
 
 	if err := pl.SetPrimaryStream(stream.Source, false, false); err != nil {
 		pl.Close()
-		<-copyDone
-		_ = os.Remove(tmpOpus)
-		return fmt.Errorf("set stream: %w", err)
+		<-encDone
+		return nil, fmt.Errorf("set stream: %w", err)
 	}
 	if err := pl.Play(); err != nil {
 		pl.Close()
-		<-copyDone
-		_ = os.Remove(tmpOpus)
-		return fmt.Errorf("play: %w", err)
+		<-encDone
+		return nil, fmt.Errorf("play: %w", err)
 	}
 
 	fmt.Printf("  → %s\n", filepath.Base(finalPath))
 
+	// Wait only for the download phase (player done), not the encode.
 	for {
 		select {
 		case <-ctx.Done():
 			pl.Close()
-			<-copyDone
-			_ = os.Remove(tmpOpus)
-			return ctx.Err()
+			<-encDone
+			return nil, ctx.Err()
 		case ev, ok := <-events:
 			if !ok || ev.Type == lsplayer.EventTypeStop || ev.Type == lsplayer.EventTypeNotPlaying {
 				pl.Close()
-				if err := <-copyDone; err != nil {
-					_ = os.Remove(tmpOpus)
-					return err
-				}
-				return os.Rename(tmpOpus, finalPath)
+				return &encodeResult{tmpPath: tmpOpus, finalPath: finalPath, done: encDone}, nil
 			}
 		}
 	}
@@ -317,18 +358,25 @@ func contextDirName(r *spclient.ContextResolver) string {
 }
 
 // trackFilename builds "01 - Artist - Title.opus" (or "Artist - Title.opus" when pos==0).
+// pos is used only as a fallback when the track metadata has no number.
 func trackFilename(stream *lsplayer.Stream, pos int) string {
 	title := stream.Media.Name()
 	artist := ""
-	if t := stream.Media.Track(); t != nil && len(t.GetArtist()) > 0 {
-		artist = t.GetArtist()[0].GetName()
+	trackNum := pos
+	if t := stream.Media.Track(); t != nil {
+		if len(t.GetArtist()) > 0 {
+			artist = t.GetArtist()[0].GetName()
+		}
+		if n := int(t.GetNumber()); n > 0 {
+			trackNum = n
+		}
 	}
 	name := title
 	if artist != "" {
 		name = artist + " - " + title
 	}
-	if pos > 0 {
-		name = fmt.Sprintf("%02d - %s", pos, name)
+	if trackNum > 0 {
+		name = fmt.Sprintf("%02d - %s", trackNum, name)
 	}
 	return safeFilename(name) + ".opus"
 }
