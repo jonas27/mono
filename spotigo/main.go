@@ -42,18 +42,14 @@ func run() error {
 		return err
 	}
 
-	sess, err := player.New(c, *flagCreds)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+
+	sess, err := player.New(ctx, c, *flagCreds)
 	if err != nil {
 		return err
 	}
 	defer sess.Close()
-
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	sig := make(chan os.Signal, 1)
-	signal.Notify(sig, os.Interrupt, syscall.SIGTERM)
-	go func() { <-sig; cancel() }()
 
 	return sess.Run(ctx, args[0], *flagOutput, *flagAlbum)
 }

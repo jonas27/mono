@@ -1,7 +1,6 @@
 package player
 
 import (
-	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -26,7 +25,7 @@ func TestEncodeOpusFromFile(t *testing.T) {
 	outPath := filepath.Join(dir, "out.opus")
 	meta := trackMeta{Title: "Test Track", Artist: "Test Artist", Album: "Test Album", TrackNumber: 1}
 
-	require.NoError(t, encodeOpusFromFile(context.Background(), rawPath, outPath, meta))
+	require.NoError(t, encodeOpusFromFile(t.Context(), rawPath, outPath, meta))
 
 	info, err := os.Stat(outPath)
 	require.NoError(t, err, "output file not created")
@@ -59,7 +58,7 @@ func TestEncodeOpusDiscNumber(t *testing.T) {
 
 	outPath := filepath.Join(dir, "out.opus")
 	meta := trackMeta{Title: "Dani California", Artist: "Red Hot Chili Peppers", Album: "Stadium Arcadium", TrackNumber: 1, DiscNumber: 1}
-	require.NoError(t, encodeOpusFromFile(context.Background(), rawPath, outPath, meta))
+	require.NoError(t, encodeOpusFromFile(t.Context(), rawPath, outPath, meta))
 
 	out, err := exec.Command("ffprobe", "-v", "quiet", "-print_format", "json",
 		"-show_streams", outPath).Output()
@@ -84,6 +83,6 @@ func TestEncodeOpusFromFileMissingInput(t *testing.T) {
 	}
 
 	dir := t.TempDir()
-	err := encodeOpusFromFile(context.Background(), filepath.Join(dir, "nonexistent.raw"), filepath.Join(dir, "out.opus"), trackMeta{})
+	err := encodeOpusFromFile(t.Context(), filepath.Join(dir, "nonexistent.raw"), filepath.Join(dir, "out.opus"), trackMeta{})
 	require.Error(t, err)
 }
