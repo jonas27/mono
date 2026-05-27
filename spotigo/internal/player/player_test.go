@@ -1,6 +1,7 @@
 package player
 
 import (
+	"context"
 	"encoding/json"
 	"os"
 	"os/exec"
@@ -25,7 +26,7 @@ func TestEncodeOpusFromFile(t *testing.T) {
 	outPath := filepath.Join(dir, "out.opus")
 	meta := trackMeta{Title: "Test Track", Artist: "Test Artist", Album: "Test Album", TrackNumber: 1}
 
-	require.NoError(t, encodeOpusFromFile(rawPath, outPath, meta))
+	require.NoError(t, encodeOpusFromFile(context.Background(), rawPath, outPath, meta))
 
 	info, err := os.Stat(outPath)
 	require.NoError(t, err, "output file not created")
@@ -46,12 +47,43 @@ func TestEncodeOpusFromFile(t *testing.T) {
 	require.Equal(t, "1", probe.Streams[0].Tags["track"])
 }
 
+func TestEncodeOpusDiscNumber(t *testing.T) {
+	if _, err := exec.LookPath("ffmpeg"); err != nil {
+		t.Skip("ffmpeg not in PATH")
+	}
+
+	dir := t.TempDir()
+	silence := make([]byte, 44100/10*2*4)
+	rawPath := filepath.Join(dir, "silence.raw")
+	require.NoError(t, os.WriteFile(rawPath, silence, 0o600))
+
+	outPath := filepath.Join(dir, "out.opus")
+	meta := trackMeta{Title: "Dani California", Artist: "Red Hot Chili Peppers", Album: "Stadium Arcadium", TrackNumber: 1, DiscNumber: 1}
+	require.NoError(t, encodeOpusFromFile(context.Background(), rawPath, outPath, meta))
+
+	out, err := exec.Command("ffprobe", "-v", "quiet", "-print_format", "json",
+		"-show_streams", outPath).Output()
+	require.NoError(t, err)
+
+	var probe struct {
+		Streams []struct {
+			Tags map[string]string `json:"tags"`
+		} `json:"streams"`
+	}
+	require.NoError(t, json.Unmarshal(out, &probe))
+	require.NotEmpty(t, probe.Streams)
+
+	tags := probe.Streams[0].Tags
+	require.Equal(t, "1", tags["disc"])
+	require.Equal(t, "1", tags["track"])
+}
+
 func TestEncodeOpusFromFileMissingInput(t *testing.T) {
 	if _, err := exec.LookPath("ffmpeg"); err != nil {
 		t.Skip("ffmpeg not in PATH")
 	}
 
 	dir := t.TempDir()
-	err := encodeOpusFromFile(filepath.Join(dir, "nonexistent.raw"), filepath.Join(dir, "out.opus"), trackMeta{})
+	err := encodeOpusFromFile(context.Background(), filepath.Join(dir, "nonexistent.raw"), filepath.Join(dir, "out.opus"), trackMeta{})
 	require.Error(t, err)
 }

@@ -7,6 +7,7 @@ import (
 	"encoding/hex"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"os"
 	"os/exec"
@@ -53,7 +54,7 @@ func New(c *creds.Creds, credsFile string) (*Session, error) {
 	if len(blob) > 0 {
 		authCreds = session.StoredCredentials{Username: c.Username, Data: blob}
 	} else {
-		fmt.Printf("No credentials — open http://localhost:%d/login in your browser.\n", oauthPort)
+		slog.Info("no credentials stored", "login_url", fmt.Sprintf("http://localhost:%d/login", oauthPort))
 		authCreds = session.InteractiveCredentials{CallbackPort: oauthPort}
 		interactive = true
 	}
@@ -72,9 +73,9 @@ func New(c *creds.Creds, credsFile string) (*Session, error) {
 		c.Username = sess.Username()
 		c.SetStored(sess.StoredCredentials())
 		if err := creds.Save(credsFile, c); err != nil {
-			fmt.Fprintf(os.Stderr, "warning: save credentials: %v\n", err)
+			slog.Warn("save credentials", "error", err)
 		} else {
-			fmt.Println("Credentials saved to", credsFile)
+			slog.Info("credentials saved", "path", credsFile)
 		}
 	}
 
@@ -121,9 +122,9 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride strin
 			return err
 		}
 		defer os.Remove(rawPath)
-		finalPath := filepath.Join(outDir, trackFilename(meta, -1))
-		fmt.Printf("  → %s\n", filepath.Base(finalPath))
-		return encodeOpusFromFile(rawPath, finalPath, meta)
+		finalPath := filepath.Join(outDir, trackFilename(meta))
+		slog.Info("encoding track", "file", filepath.Base(finalPath))
+		return encodeOpusFromFile(ctx, rawPath, finalPath, meta)
 	default:
 		return s.streamContext(ctx, uri, outDir, albumOverride)
 	}
@@ -170,7 +171,7 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride 
 		return err
 	}
 
-	fmt.Printf("Found %d tracks → %s\n", len(trackURIs), dir)
+	slog.Info("found tracks", "count", len(trackURIs), "dir", dir)
 
 	g, gctx := errgroup.WithContext(ctx)
 
@@ -180,19 +181,19 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride 
 		}
 		id, err := parseSpotifyID(trackURI)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "skip %s: %v\n", trackURI, err)
+			slog.Warn("skip track", "uri", trackURI, "error", err)
 			continue
 		}
 		rawPath, meta, err := s.downloadTrackRaw(gctx, id, dir)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "error: download track %d: %v\n", i+1, err)
+			slog.Error("download track failed", "index", i+1, "error", err)
 			continue
 		}
-		finalPath := filepath.Join(dir, trackFilename(meta, i))
-		fmt.Printf("  → %s\n", filepath.Base(finalPath))
+		finalPath := filepath.Join(dir, trackFilename(meta))
+		slog.Info("encoding track", "file", filepath.Base(finalPath))
 		g.Go(func() error {
 			defer os.Remove(rawPath)
-			return encodeOpusFromFile(rawPath, finalPath, meta)
+			return encodeOpusFromFile(gctx, rawPath, finalPath, meta)
 		})
 	}
 
@@ -207,7 +208,7 @@ func (s *Session) downloadTrackRaw(ctx context.Context, id librespot.SpotifyId, 
 		if err == nil || ctx.Err() != nil || !strings.Contains(err.Error(), "aes key") {
 			break
 		}
-		fmt.Fprintf(os.Stderr, "audio key rate-limited, retrying in %s (%d/4)\n", d, i+2)
+		slog.Warn("audio key rate-limited, retrying", "delay", d, "attempt", i+2)
 		select {
 		case <-ctx.Done():
 			return "", trackMeta{}, ctx.Err()
@@ -327,20 +328,9 @@ func contextDirName(r *spclient.ContextResolver) string {
 	return safeFilename(parts[len(parts)-1])
 }
 
-// trackFilename builds "01 - Artist - Title.opus" (or "Artist - Title.opus" when pos == -1).
-func trackFilename(meta trackMeta, pos int) string {
-	trackNum := pos
-	if meta.TrackNumber > 0 {
-		trackNum = meta.TrackNumber
-	}
-	name := meta.Title
-	if meta.Artist != "" {
-		name = meta.Artist + " - " + meta.Title
-	}
-	if trackNum >= 0 {
-		name = fmt.Sprintf("%02d - %s", trackNum, name)
-	}
-	return safeFilename(name) + ".opus"
+// trackFilename builds "Title.opus".
+func trackFilename(meta trackMeta) string {
+	return safeFilename(meta.Title) + ".opus"
 }
 
 // downloadCover saves cover.jpg in dir from the track's album art (no-op if already exists).
@@ -398,6 +388,7 @@ type trackMeta struct {
 	Artist      string
 	Album       string
 	TrackNumber int
+	DiscNumber  int
 }
 
 func streamTrackMeta(stream *lsplayer.Stream) trackMeta {
@@ -413,12 +404,15 @@ func streamTrackMeta(stream *lsplayer.Stream) trackMeta {
 		if n := int(t.GetNumber()); n > 0 {
 			m.TrackNumber = n
 		}
+		if d := int(t.GetDiscNumber()); d > 0 {
+			m.DiscNumber = d
+		}
 	}
 	return m
 }
 
 // encodeOpus encodes f32le PCM from r into an Opus file at path using ffmpeg.
-func encodeOpus(path string, r io.Reader, meta trackMeta) error {
+func encodeOpus(ctx context.Context, path string, r io.Reader, meta trackMeta) error {
 	args := []string{
 		"-hide_banner", "-loglevel", "error",
 		"-f", "f32le", "-ar", "44100", "-ac", "2", "-i", "pipe:0",
@@ -436,22 +430,25 @@ func encodeOpus(path string, r io.Reader, meta trackMeta) error {
 	if meta.TrackNumber > 0 {
 		args = append(args, "-metadata", fmt.Sprintf("track=%d", meta.TrackNumber))
 	}
+	if meta.DiscNumber > 0 {
+		args = append(args, "-metadata", fmt.Sprintf("disc=%d", meta.DiscNumber))
+	}
 	args = append(args, "-f", "ogg", "-y", path)
 
-	cmd := exec.Command("ffmpeg", args...)
+	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
 }
 
 // encodeOpusFromFile opens rawPath (f32le PCM) and encodes it to an Opus file at outPath.
-func encodeOpusFromFile(rawPath, outPath string, meta trackMeta) error {
+func encodeOpusFromFile(ctx context.Context, rawPath, outPath string, meta trackMeta) error {
 	f, err := os.Open(rawPath)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	return encodeOpus(outPath, f, meta)
+	return encodeOpus(ctx, outPath, f, meta)
 }
 
 // parseSpotifyID parses a spotify: URI into a SpotifyId.
@@ -485,7 +482,7 @@ func toURI(s string) string {
 	return s
 }
 
-// safeFilename strips unsafe characters and normalises spaces to underscores.
+// safeFilename strips filesystem-unsafe characters, preserving original casing and spaces.
 func safeFilename(s string) string {
 	var b strings.Builder
 	for _, r := range s {
