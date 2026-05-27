@@ -6,6 +6,8 @@ replace github.com/devgianlu/go-librespot => ./librespot-pure
 
 require (
 	github.com/devgianlu/go-librespot v0.7.1
+	github.com/stretchr/testify v1.11.1
+	golang.org/x/sync v0.20.0
 	gopkg.in/yaml.v3 v3.0.1
 )
 
@@ -24,7 +26,6 @@ require (
 	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/sirupsen/logrus v1.9.3 // indirect
 	github.com/stretchr/objx v0.5.3 // indirect
-	github.com/stretchr/testify v1.11.1 // indirect
 	golang.org/x/crypto v0.46.0 // indirect
 	golang.org/x/exp v0.0.0-20251209150349-8475f28825e9 // indirect
 	golang.org/x/net v0.48.0 // indirect

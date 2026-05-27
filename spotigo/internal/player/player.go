@@ -1,4 +1,4 @@
-// Package player handles Spotify auth and streams audio to MP3 files.
+// Package player handles Spotify auth and streams audio to Opus files.
 package player
 
 import (
@@ -14,7 +14,6 @@ import (
 	"strings"
 	"syscall"
 	"time"
-	"unicode"
 
 	librespot "github.com/devgianlu/go-librespot"
 	"github.com/devgianlu/go-librespot/ap"
@@ -23,6 +22,7 @@ import (
 	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 	"github.com/devgianlu/go-librespot/session"
 	"github.com/devgianlu/go-librespot/spclient"
+	"golang.org/x/sync/errgroup"
 
 	"github.com/jmanser/spotigo/internal/creds"
 )
@@ -91,9 +91,13 @@ func New(c *creds.Creds, credsFile string) (*Session, error) {
 	return &Session{sess: sess, countryCode: cc}, nil
 }
 
-// Run streams the Spotify URL or URI, writing MP3 files into outDir.
-// Albums and playlists create a subdirectory named after the album/playlist (or
-// albumOverride if non-empty). Tracks write directly into outDir.
+// Close releases the session.
+func (s *Session) Close() {
+	s.sess.Close()
+}
+
+// Run streams the Spotify URL or URI, writing Opus files into outDir.
+// Albums and playlists create a subdirectory; tracks write directly into outDir.
 func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride string) error {
 	uri := toURI(urlOrURI)
 
@@ -112,36 +116,20 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride strin
 		if err := os.MkdirAll(outDir, 0o750); err != nil {
 			return err
 		}
-		res, err := s.streamDownload(ctx, *id, outDir, 0)
+		rawPath, meta, err := s.downloadTrackRaw(ctx, *id, outDir)
 		if err != nil {
 			return err
 		}
-		return res.complete()
-
-	default: // album, playlist, show, …
+		defer os.Remove(rawPath)
+		finalPath := filepath.Join(outDir, trackFilename(meta, -1))
+		fmt.Printf("  → %s\n", filepath.Base(finalPath))
+		return encodeOpusFromFile(rawPath, finalPath, meta)
+	default:
 		return s.streamContext(ctx, uri, outDir, albumOverride)
 	}
 }
 
-// encodeResult holds a background encode that is still running.
-type encodeResult struct {
-	tmpPath   string
-	finalPath string
-	done      chan error
-}
-
-// complete waits for the background encode and atomically renames the file.
-func (r *encodeResult) complete() error {
-	err := <-r.done
-	if err != nil {
-		_ = os.Remove(r.tmpPath)
-		return err
-	}
-	return os.Rename(r.tmpPath, r.finalPath)
-}
-
-// streamContext resolves an album/playlist and streams every track.
-// Downloads are pipelined: track N+1 begins downloading while track N encodes.
+// streamContext resolves an album/playlist and downloads every track sequentially.
 func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride string) error {
 	spotCtx, err := s.sess.Spclient().ContextResolve(ctx, uri)
 	if err != nil {
@@ -184,95 +172,73 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride 
 
 	fmt.Printf("Found %d tracks → %s\n", len(trackURIs), dir)
 
-	var pending *encodeResult
+	g, gctx := errgroup.WithContext(ctx)
+
 	for i, trackURI := range trackURIs {
-		if ctx.Err() != nil {
+		if gctx.Err() != nil {
 			break
 		}
-		p := strings.SplitN(trackURI, ":", 3)
-		if len(p) != 3 {
-			continue
-		}
-		id, err := librespot.SpotifyIdFromBase62(librespot.SpotifyIdType(p[1]), p[2])
+		id, err := parseSpotifyID(trackURI)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "skip %s: %v\n", trackURI, err)
 			continue
 		}
-
-		// Start the next download; this blocks only until the player finishes
-		// writing PCM — the encode runs in a goroutine behind it.
-		res, dlErr := s.streamDownloadWithRetry(ctx, *id, dir, i+1)
-
-		// The previous encode ran concurrently with this download; collect it now.
-		if pending != nil {
-			if encErr := pending.complete(); encErr != nil {
-				fmt.Fprintf(os.Stderr, "error: encode: %v\n", encErr)
-			}
-			pending = nil
-		}
-
-		if dlErr != nil {
-			fmt.Fprintf(os.Stderr, "error: track %d: %v\n", i+1, dlErr)
+		rawPath, meta, err := s.downloadTrackRaw(gctx, id, dir)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error: download track %d: %v\n", i+1, err)
 			continue
 		}
-		pending = res
+		finalPath := filepath.Join(dir, trackFilename(meta, i))
+		fmt.Printf("  → %s\n", filepath.Base(finalPath))
+		g.Go(func() error {
+			defer os.Remove(rawPath)
+			return encodeOpusFromFile(rawPath, finalPath, meta)
+		})
 	}
 
-	// Wait for the last encode.
-	if pending != nil {
-		if err := pending.complete(); err != nil {
-			fmt.Fprintf(os.Stderr, "error: encode last track: %v\n", err)
-		}
-	}
-
-	return nil
+	return g.Wait()
 }
 
-func (s *Session) streamDownloadWithRetry(ctx context.Context, id librespot.SpotifyId, dir string, pos int) (*encodeResult, error) {
-	delays := []time.Duration{20 * time.Second, 40 * time.Second, 60 * time.Second}
-	res, err := s.streamDownload(ctx, id, dir, pos)
-	for i, d := range delays {
-		if err == nil || ctx.Err() != nil {
+// downloadTrackRaw streams decoded PCM to a temp file in dir, retrying on audio key rate-limit errors.
+// Returns the temp file path and track metadata; caller is responsible for removing the file.
+func (s *Session) downloadTrackRaw(ctx context.Context, id librespot.SpotifyId, dir string) (string, trackMeta, error) {
+	rawPath, meta, err := s.downloadRaw(ctx, id, dir)
+	for i, d := range []time.Duration{20 * time.Second, 40 * time.Second, 60 * time.Second} {
+		if err == nil || ctx.Err() != nil || !strings.Contains(err.Error(), "aes key") {
 			break
 		}
-		if !strings.Contains(err.Error(), "aes key") {
-			break
-		}
-		fmt.Fprintf(os.Stderr, "audio key rate-limited, retrying track %d in %s (attempt %d/4)\n", pos, d, i+2)
+		fmt.Fprintf(os.Stderr, "audio key rate-limited, retrying in %s (%d/4)\n", d, i+2)
 		select {
 		case <-ctx.Done():
-			return nil, ctx.Err()
+			return "", trackMeta{}, ctx.Err()
 		case <-time.After(d):
 		}
-		res, err = s.streamDownload(ctx, id, dir, pos)
+		rawPath, meta, err = s.downloadRaw(ctx, id, dir)
 	}
-	return res, err
+	return rawPath, meta, err
 }
 
-// streamDownload streams one track's audio from Spotify into a FIFO and
-// launches ffmpeg encoding in a goroutine. It returns as soon as the player
-// has finished writing PCM (i.e. the download phase is done); the caller
-// must call encodeResult.complete() to wait for the encode to finish.
-// pos > 0 prefixes the filename with a zero-padded track number.
-func (s *Session) streamDownload(ctx context.Context, id librespot.SpotifyId, dir string, pos int) (*encodeResult, error) {
+// downloadRaw performs one attempt: streams decoded PCM via a FIFO into a temp file in dir.
+// Returns the temp file path and track metadata; caller is responsible for removing the file.
+func (s *Session) downloadRaw(ctx context.Context, id librespot.SpotifyId, dir string) (rawPath string, meta trackMeta, err error) {
 	fifoPath := filepath.Join(dir, ".fifo-"+randomHex(8))
-	if err := syscall.Mkfifo(fifoPath, 0o600); err != nil {
-		return nil, fmt.Errorf("create fifo: %w", err)
+	if err = syscall.Mkfifo(fifoPath, 0o600); err != nil {
+		return "", trackMeta{}, fmt.Errorf("create fifo: %w", err)
 	}
 	defer os.Remove(fifoPath)
 
 	// Open read end non-blocking so the player's O_WRONLY|O_NONBLOCK open succeeds.
-	rfd, err := syscall.Open(fifoPath, syscall.O_RDONLY|syscall.O_NONBLOCK, 0)
-	if err != nil {
-		return nil, fmt.Errorf("open fifo: %w", err)
+	rfd, ferr := syscall.Open(fifoPath, syscall.O_RDONLY|syscall.O_NONBLOCK, 0)
+	if ferr != nil {
+		return "", trackMeta{}, fmt.Errorf("open fifo: %w", ferr)
 	}
-	if err := syscall.SetNonblock(rfd, false); err != nil {
+	if ferr = syscall.SetNonblock(rfd, false); ferr != nil {
 		_ = syscall.Close(rfd)
-		return nil, fmt.Errorf("set blocking: %w", err)
+		return "", trackMeta{}, fmt.Errorf("set blocking: %w", ferr)
 	}
 	reader := os.NewFile(uintptr(rfd), fifoPath)
 
-	pl, err := lsplayer.NewPlayer(&lsplayer.Options{
+	pl, ferr := lsplayer.NewPlayer(&lsplayer.Options{
 		Spclient:              s.sess.Spclient(),
 		AudioKey:              s.sess.AudioKey(),
 		Events:                s.sess.Events(),
@@ -283,67 +249,71 @@ func (s *Session) streamDownload(ctx context.Context, id librespot.SpotifyId, di
 		AudioOutputPipe:       fifoPath,
 		AudioOutputPipeFormat: "f32le",
 	})
-	if err != nil {
+	if ferr != nil {
 		_ = reader.Close()
-		return nil, fmt.Errorf("create player: %w", err)
+		return "", trackMeta{}, fmt.Errorf("create player: %w", ferr)
 	}
 
 	events := pl.Receive()
 
-	stream, err := pl.NewStream(ctx, http.DefaultClient, id, bitrate, 0)
-	if err != nil {
+	stream, ferr := pl.NewStream(ctx, http.DefaultClient, id, bitrate, 0)
+	if ferr != nil {
 		_ = reader.Close()
 		pl.Close()
-		return nil, fmt.Errorf("load stream: %w", err)
+		return "", trackMeta{}, fmt.Errorf("load stream: %w", ferr)
 	}
 
 	s.downloadCover(ctx, dir, stream)
-	finalPath := filepath.Join(dir, trackFilename(stream, pos))
-	tmpOpus := finalPath + ".tmp"
-	meta := streamTrackMeta(stream)
+	meta = streamTrackMeta(stream)
 
-	encDone := make(chan error, 1)
+	rawPath = filepath.Join(dir, ".raw-"+randomHex(8))
+	copyDone := make(chan error, 1)
 	go func() {
-		err := encodeOpus(tmpOpus, reader, meta)
-		_ = reader.Close()
-		if err != nil {
-			_ = os.Remove(tmpOpus)
+		f, cerr := os.Create(rawPath)
+		if cerr != nil {
+			_ = reader.Close()
+			copyDone <- cerr
+			return
 		}
-		encDone <- err
+		_, cerr = io.Copy(f, reader)
+		_ = f.Close()
+		_ = reader.Close()
+		if cerr != nil {
+			_ = os.Remove(rawPath)
+		}
+		copyDone <- cerr
 	}()
 
-	if err := pl.SetPrimaryStream(stream.Source, false, false); err != nil {
+	if ferr = pl.SetPrimaryStream(stream.Source, false, false); ferr != nil {
 		pl.Close()
-		<-encDone
-		return nil, fmt.Errorf("set stream: %w", err)
+		<-copyDone
+		_ = os.Remove(rawPath)
+		return "", trackMeta{}, fmt.Errorf("set stream: %w", ferr)
 	}
-	if err := pl.Play(); err != nil {
+	if ferr = pl.Play(); ferr != nil {
 		pl.Close()
-		<-encDone
-		return nil, fmt.Errorf("play: %w", err)
+		<-copyDone
+		_ = os.Remove(rawPath)
+		return "", trackMeta{}, fmt.Errorf("play: %w", ferr)
 	}
 
-	fmt.Printf("  → %s\n", filepath.Base(finalPath))
-
-	// Wait only for the download phase (player done), not the encode.
 	for {
 		select {
 		case <-ctx.Done():
 			pl.Close()
-			<-encDone
-			return nil, ctx.Err()
+			<-copyDone
+			_ = os.Remove(rawPath)
+			return "", trackMeta{}, ctx.Err()
 		case ev, ok := <-events:
 			if !ok || ev.Type == lsplayer.EventTypeStop || ev.Type == lsplayer.EventTypeNotPlaying {
 				pl.Close()
-				return &encodeResult{tmpPath: tmpOpus, finalPath: finalPath, done: encDone}, nil
+				if ferr = <-copyDone; ferr != nil {
+					return "", trackMeta{}, ferr
+				}
+				return rawPath, meta, nil
 			}
 		}
 	}
-}
-
-// Close releases the session.
-func (s *Session) Close() {
-	s.sess.Close()
 }
 
 // contextDirName derives a safe directory name from the resolver's metadata or URI.
@@ -357,25 +327,17 @@ func contextDirName(r *spclient.ContextResolver) string {
 	return safeFilename(parts[len(parts)-1])
 }
 
-// trackFilename builds "01 - Artist - Title.opus" (or "Artist - Title.opus" when pos==0).
-// pos is used only as a fallback when the track metadata has no number.
-func trackFilename(stream *lsplayer.Stream, pos int) string {
-	title := stream.Media.Name()
-	artist := ""
+// trackFilename builds "01 - Artist - Title.opus" (or "Artist - Title.opus" when pos == -1).
+func trackFilename(meta trackMeta, pos int) string {
 	trackNum := pos
-	if t := stream.Media.Track(); t != nil {
-		if len(t.GetArtist()) > 0 {
-			artist = t.GetArtist()[0].GetName()
-		}
-		if n := int(t.GetNumber()); n > 0 {
-			trackNum = n
-		}
+	if meta.TrackNumber > 0 {
+		trackNum = meta.TrackNumber
 	}
-	name := title
-	if artist != "" {
-		name = artist + " - " + title
+	name := meta.Title
+	if meta.Artist != "" {
+		name = meta.Artist + " - " + meta.Title
 	}
-	if trackNum > 0 {
+	if trackNum >= 0 {
 		name = fmt.Sprintf("%02d - %s", trackNum, name)
 	}
 	return safeFilename(name) + ".opus"
@@ -432,9 +394,10 @@ func (s *Session) downloadCover(ctx context.Context, dir string, stream *lsplaye
 }
 
 type trackMeta struct {
-	Title  string
-	Artist string
-	Album  string
+	Title       string
+	Artist      string
+	Album       string
+	TrackNumber int
 }
 
 func streamTrackMeta(stream *lsplayer.Stream) trackMeta {
@@ -447,22 +410,19 @@ func streamTrackMeta(stream *lsplayer.Stream) trackMeta {
 		if alb := t.GetAlbum(); alb != nil {
 			m.Album = alb.GetName()
 		}
+		if n := int(t.GetNumber()); n > 0 {
+			m.TrackNumber = n
+		}
 	}
 	return m
 }
 
-// encodeOpus encodes f32le PCM from r into an Opus file at path using ffmpeg,
-// embedding tags from meta.
+// encodeOpus encodes f32le PCM from r into an Opus file at path using ffmpeg.
 func encodeOpus(path string, r io.Reader, meta trackMeta) error {
 	args := []string{
-		"-hide_banner",
-		"-loglevel", "error",
-		"-f", "f32le",
-		"-ar", "44100",
-		"-ac", "2",
-		"-i", "pipe:0",
-		"-c:a", "libopus",
-		"-b:a", "64k",
+		"-hide_banner", "-loglevel", "error",
+		"-f", "f32le", "-ar", "44100", "-ac", "2", "-i", "pipe:0",
+		"-c:a", "libopus", "-b:a", "64k",
 	}
 	if meta.Title != "" {
 		args = append(args, "-metadata", "title="+meta.Title)
@@ -473,12 +433,38 @@ func encodeOpus(path string, r io.Reader, meta trackMeta) error {
 	if meta.Album != "" {
 		args = append(args, "-metadata", "album="+meta.Album)
 	}
+	if meta.TrackNumber > 0 {
+		args = append(args, "-metadata", fmt.Sprintf("track=%d", meta.TrackNumber))
+	}
 	args = append(args, "-f", "ogg", "-y", path)
 
 	cmd := exec.Command("ffmpeg", args...)
 	cmd.Stdin = r
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+// encodeOpusFromFile opens rawPath (f32le PCM) and encodes it to an Opus file at outPath.
+func encodeOpusFromFile(rawPath, outPath string, meta trackMeta) error {
+	f, err := os.Open(rawPath)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+	return encodeOpus(outPath, f, meta)
+}
+
+// parseSpotifyID parses a spotify: URI into a SpotifyId.
+func parseSpotifyID(uri string) (librespot.SpotifyId, error) {
+	p := strings.SplitN(uri, ":", 3)
+	if len(p) != 3 {
+		return librespot.SpotifyId{}, fmt.Errorf("invalid URI: %s", uri)
+	}
+	id, err := librespot.SpotifyIdFromBase62(librespot.SpotifyIdType(p[1]), p[2])
+	if err != nil {
+		return librespot.SpotifyId{}, err
+	}
+	return *id, nil
 }
 
 // toURI converts an open.spotify.com URL to a spotify: URI.
@@ -499,15 +485,16 @@ func toURI(s string) string {
 	return s
 }
 
-// safeFilename strips characters that are unsafe in filenames and replaces spaces with underscores.
+// safeFilename strips unsafe characters and normalises spaces to underscores.
 func safeFilename(s string) string {
 	var b strings.Builder
 	for _, r := range s {
-		if unicode.IsLetter(r) || unicode.IsDigit(r) || r == ' ' || r == '-' || r == '_' {
-			b.WriteRune(r)
+		if r == 0 || strings.ContainsRune(`/\:*?"<>|`, r) {
+			continue
 		}
+		b.WriteRune(r)
 	}
-	return strings.Join(strings.Fields(b.String()), "_")
+	return strings.Trim(b.String(), " .")
 }
 
 func randomHex(n int) string {
