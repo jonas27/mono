@@ -305,7 +305,17 @@ func (s *Session) downloadRaw(ctx context.Context, id librespot.SpotifyId, dir s
 			_ = os.Remove(rawPath)
 			return "", trackMeta{}, ctx.Err()
 		case ev, ok := <-events:
-			if !ok || ev.Type == lsplayer.EventTypeStop || ev.Type == lsplayer.EventTypeNotPlaying {
+			if !ok || ev.Type == lsplayer.EventTypeStop {
+				// Abnormal stop (e.g. output device error). The pipe output
+				// may not close its write end, so close the read end here to
+				// unblock io.Copy before waiting.
+				pl.Close()
+				_ = reader.Close()
+				<-copyDone
+				_ = os.Remove(rawPath)
+				return "", trackMeta{}, fmt.Errorf("playback stopped unexpectedly")
+			}
+			if ev.Type == lsplayer.EventTypeNotPlaying {
 				pl.Close()
 				if ferr = <-copyDone; ferr != nil {
 					return "", trackMeta{}, ferr
@@ -481,16 +491,21 @@ func toURI(s string) string {
 	return s
 }
 
-// safeFilename strips filesystem-unsafe characters, preserving original casing and spaces.
+// safeFilename converts a string to a kebab-case alphanumeric slug.
 func safeFilename(s string) string {
+	s = strings.ToLower(s)
 	var b strings.Builder
+	prevDash := true
 	for _, r := range s {
-		if r == 0 || strings.ContainsRune(`/\:*?"<>|`, r) {
-			continue
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') {
+			b.WriteRune(r)
+			prevDash = false
+		} else if !prevDash {
+			b.WriteRune('-')
+			prevDash = true
 		}
-		b.WriteRune(r)
 	}
-	return strings.Trim(b.String(), " .")
+	return strings.Trim(b.String(), "-")
 }
 
 func randomHex(n int) string {
