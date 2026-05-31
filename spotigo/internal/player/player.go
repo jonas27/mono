@@ -42,7 +42,6 @@ type Session struct {
 // New creates an authenticated Session. On first run (no stored credentials),
 // it triggers an interactive OAuth2 login at http://localhost:{oauthPort}/login.
 func New(ctx context.Context, c *creds.Creds, credsFile string) (*Session, error) {
-
 	blob, err := c.StoredBytes()
 	if err != nil {
 		return nil, err
