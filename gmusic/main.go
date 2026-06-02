@@ -17,7 +17,7 @@ import (
 	"gmusic/player"
 )
 
-var startDir  = flag.String("dir", "", "music directory to open (default: ~/Music or cwd)")
+var startDir = flag.String("dir", "", "music directory to open (default: ~/Music or cwd)")
 var showStats = flag.Bool("stats", false, "show CPU and memory usage")
 
 // ── Styles ────────────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ type track struct {
 }
 
 var audioExts = map[string]bool{
-	".mp3": true, ".wav": true, ".flac": true, ".ogg": true,
+	".mp3": true, ".wav": true, ".flac": true, ".ogg": true, ".opus": true,
 }
 
 func loadTracks(dir string) []track {

@@ -27,7 +27,8 @@ func run() error {
 	var (
 		flagCreds  = flag.String("creds", ".creds.yaml", "credentials file")
 		flagOutput = flag.String("output", "downloads", "output directory (f32le PCM, 44100 Hz, stereo)")
-		flagAlbum  = flag.String("album", "", "override album/playlist name used as output subdirectory")
+		flagAlbum  = flag.String("album", "", "album name (required for playlists; used as output subdirectory and metadata)")
+		flagArtist = flag.String("artist", "", "artist name (required for playlists; overrides per-track artist metadata)")
 	)
 	flag.Parse()
 
@@ -51,5 +52,5 @@ func run() error {
 	}
 	defer sess.Close()
 
-	return sess.Run(ctx, args[0], *flagOutput, *flagAlbum)
+	return sess.Run(ctx, args[0], *flagOutput, *flagAlbum, *flagArtist)
 }

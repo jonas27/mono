@@ -97,7 +97,8 @@ func (s *Session) Close() {
 
 // Run streams the Spotify URL or URI, writing Opus files into outDir.
 // Albums and playlists create a subdirectory; tracks write directly into outDir.
-func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride string) error {
+// Playlists require both albumOverride and artistOverride.
+func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, artistOverride string) error {
 	uri := toURI(urlOrURI)
 
 	parts := strings.SplitN(uri, ":", 3)
@@ -124,12 +125,15 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride strin
 		slog.Info("encoding track", "file", filepath.Base(finalPath))
 		return encodeOpusFromFile(ctx, rawPath, finalPath, meta)
 	default:
-		return s.streamContext(ctx, uri, outDir, albumOverride)
+		if typ == "playlist" && (albumOverride == "" || artistOverride == "") {
+			return fmt.Errorf("playlist download requires -album and -artist flags")
+		}
+		return s.streamContext(ctx, uri, outDir, albumOverride, artistOverride)
 	}
 }
 
 // streamContext resolves an album/playlist and downloads every track sequentially.
-func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride string) error {
+func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride, artistOverride string) error {
 	spotCtx, err := s.sess.Spclient().ContextResolve(ctx, uri)
 	if err != nil {
 		return fmt.Errorf("resolve context: %w", err)
@@ -186,6 +190,12 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride 
 		if err != nil {
 			slog.Error("download track failed", "index", i+1, "error", err)
 			continue
+		}
+		if albumOverride != "" {
+			meta.Album = albumOverride
+		}
+		if artistOverride != "" {
+			meta.Artist = artistOverride
 		}
 		finalPath := filepath.Join(dir, trackFilename(meta))
 		slog.Info("encoding track", "file", filepath.Base(finalPath))

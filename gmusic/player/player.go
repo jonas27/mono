@@ -80,6 +80,8 @@ func (p *Player) Load(path string, onDone func()) error {
 		streamer, format, err = flac.Decode(f)
 	case ".ogg":
 		streamer, format, err = vorbis.Decode(f)
+	case ".opus":
+		streamer, format, err = decodeOpus(f)
 	default:
 		f.Close()
 		return fmt.Errorf("unsupported format: %s", ext)
