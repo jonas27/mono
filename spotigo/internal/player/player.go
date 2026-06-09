@@ -121,7 +121,12 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, arti
 			return err
 		}
 		defer os.Remove(rawPath)
-		finalPath := filepath.Join(outDir, trackFilename(meta))
+		finalDir := filepath.Join(outDir, safeFilename(meta.Artist), safeFilename(meta.Album))
+		if err := os.MkdirAll(finalDir, 0o750); err != nil {
+			return err
+		}
+		_ = os.Rename(filepath.Join(outDir, "cover.jpg"), filepath.Join(finalDir, "cover.jpg"))
+		finalPath := filepath.Join(finalDir, trackFilename(meta))
 		slog.Info("encoding track", "file", filepath.Base(finalPath))
 		return encodeOpusFromFile(ctx, rawPath, finalPath, meta)
 	default:
@@ -164,16 +169,11 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 		return fmt.Errorf("no tracks found for %s", uri)
 	}
 
-	dirName := contextDirName(resolver)
-	if albumOverride != "" {
-		dirName = safeFilename(albumOverride)
-	}
-	dir := filepath.Join(outDir, dirName)
-	if err := os.MkdirAll(dir, 0o750); err != nil {
+	if err := os.MkdirAll(outDir, 0o750); err != nil {
 		return err
 	}
 
-	slog.Info("found tracks", "count", len(trackURIs), "dir", dir)
+	slog.Info("found tracks", "count", len(trackURIs))
 
 	g, gctx := errgroup.WithContext(ctx)
 
@@ -186,7 +186,7 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 			slog.Warn("skip track", "uri", trackURI, "error", err)
 			continue
 		}
-		rawPath, meta, err := s.downloadTrackRaw(gctx, id, dir)
+		rawPath, meta, err := s.downloadTrackRaw(gctx, id, outDir)
 		if err != nil {
 			slog.Error("download track failed", "index", i+1, "error", err)
 			continue
@@ -197,7 +197,16 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 		if artistOverride != "" {
 			meta.Artist = artistOverride
 		}
-		finalPath := filepath.Join(dir, trackFilename(meta))
+		finalDir := filepath.Join(outDir, safeFilename(meta.Artist), safeFilename(meta.Album))
+		if err := os.MkdirAll(finalDir, 0o750); err != nil {
+			slog.Error("mkdir failed", "dir", finalDir, "error", err)
+			os.Remove(rawPath)
+			continue
+		}
+		if _, err := os.Stat(filepath.Join(finalDir, "cover.jpg")); os.IsNotExist(err) {
+			_ = os.Rename(filepath.Join(outDir, "cover.jpg"), filepath.Join(finalDir, "cover.jpg"))
+		}
+		finalPath := filepath.Join(finalDir, trackFilename(meta))
 		slog.Info("encoding track", "file", filepath.Base(finalPath))
 		g.Go(func() error {
 			defer os.Remove(rawPath)
@@ -335,16 +344,6 @@ func (s *Session) downloadRaw(ctx context.Context, id librespot.SpotifyId, dir s
 	}
 }
 
-// contextDirName derives a safe directory name from the resolver's metadata or URI.
-func contextDirName(r *spclient.ContextResolver) string {
-	for _, k := range []string{"context_description", "name", "playlist.title", "title"} {
-		if v := r.Metadata()[k]; v != "" {
-			return safeFilename(v)
-		}
-	}
-	parts := strings.Split(r.Uri(), ":")
-	return safeFilename(parts[len(parts)-1])
-}
 
 // trackFilename builds "Title.opus".
 func trackFilename(meta trackMeta) string {
