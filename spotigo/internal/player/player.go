@@ -96,8 +96,7 @@ func (s *Session) Close() {
 }
 
 // Run streams the Spotify URL or URI, writing Opus files into outDir.
-// Albums and playlists create a subdirectory; tracks write directly into outDir.
-// Playlists require both albumOverride and artistOverride.
+// Output is organized into outDir/<artist>/<album>/ subdirectories.
 func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, artistOverride string) error {
 	uri := toURI(urlOrURI)
 
@@ -130,9 +129,6 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, arti
 		slog.Info("encoding track", "file", filepath.Base(finalPath))
 		return encodeOpusFromFile(ctx, rawPath, finalPath, meta)
 	default:
-		if typ == "playlist" && (albumOverride == "" || artistOverride == "") {
-			return fmt.Errorf("playlist download requires -album and -artist flags")
-		}
 		return s.streamContext(ctx, uri, outDir, albumOverride, artistOverride)
 	}
 }

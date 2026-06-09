@@ -27,8 +27,8 @@ func run() error {
 	var (
 		flagCreds  = flag.String("creds", ".creds.yaml", "credentials file")
 		flagOutput = flag.String("output", "downloads", "output directory (f32le PCM, 44100 Hz, stereo)")
-		flagAlbum  = flag.String("album", "", "album name (required for playlists; used as output subdirectory and metadata)")
-		flagArtist = flag.String("artist", "", "artist name (required for playlists; overrides per-track artist metadata)")
+		flagAlbum  = flag.String("album", "", "album name override (overrides per-track album metadata)")
+		flagArtist = flag.String("artist", "", "artist name override (overrides per-track artist metadata)")
 	)
 	flag.Parse()
 
