@@ -173,6 +173,7 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 
 	g, gctx := errgroup.WithContext(ctx)
 
+	var entries []playlistEntry
 	for i, trackURI := range trackURIs {
 		if gctx.Err() != nil {
 			break
@@ -204,13 +205,81 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 		}
 		finalPath := filepath.Join(finalDir, trackFilename(meta))
 		slog.Info("encoding track", "file", filepath.Base(finalPath))
+		entries = append(entries, playlistEntry{path: finalPath, meta: meta})
 		g.Go(func() error {
 			defer os.Remove(rawPath)
 			return encodeOpusFromFile(gctx, rawPath, finalPath, meta)
 		})
 	}
 
-	return g.Wait()
+	if err := g.Wait(); err != nil {
+		return err
+	}
+
+	if len(entries) > 0 {
+		name := contextName(resolver, albumOverride)
+		if err := writePlaylist(outDir, name, entries); err != nil {
+			slog.Warn("write playlist failed", "error", err)
+		}
+	}
+	return nil
+}
+
+type playlistEntry struct {
+	path string
+	meta trackMeta
+}
+
+// contextName returns a safe filename for the playlist, preferring resolver metadata.
+func contextName(r *spclient.ContextResolver, nameOverride string) string {
+	if nameOverride != "" {
+		return safeFilename(nameOverride)
+	}
+	for _, k := range []string{"context_description", "name", "playlist.title", "title"} {
+		if v := r.Metadata()[k]; v != "" {
+			return safeFilename(v)
+		}
+	}
+	parts := strings.Split(r.Uri(), ":")
+	return safeFilename(parts[len(parts)-1])
+}
+
+// writePlaylist writes an M3U8 playlist file.
+// If all entries share the same directory the file is placed there (paths are bare filenames).
+// Otherwise it is placed in outDir with relative paths from outDir.
+func writePlaylist(outDir, name string, entries []playlistEntry) error {
+	baseDir := outDir
+	if len(entries) > 0 {
+		first := filepath.Dir(entries[0].path)
+		allSame := true
+		for _, e := range entries[1:] {
+			if filepath.Dir(e.path) != first {
+				allSame = false
+				break
+			}
+		}
+		if allSame {
+			baseDir = first
+		}
+	}
+
+	var b strings.Builder
+	b.WriteString("#EXTM3U\n")
+	for _, e := range entries {
+		rel, err := filepath.Rel(baseDir, e.path)
+		if err != nil {
+			rel = e.path
+		}
+		label := e.meta.Title
+		if e.meta.Artist != "" {
+			label = e.meta.Artist + " - " + e.meta.Title
+		}
+		fmt.Fprintf(&b, "#EXTINF:-1,%s\n%s\n", label, rel)
+	}
+
+	playlistPath := filepath.Join(baseDir, name+".m3u8")
+	slog.Info("writing playlist", "file", playlistPath)
+	return os.WriteFile(playlistPath, []byte(b.String()), 0o640)
 }
 
 // downloadTrackRaw streams decoded PCM to a temp file in dir, retrying on audio key rate-limit errors.
