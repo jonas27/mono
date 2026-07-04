@@ -20,6 +20,7 @@ import (
 	"github.com/devgianlu/go-librespot/ap"
 	lsplayer "github.com/devgianlu/go-librespot/player"
 	devicespb "github.com/devgianlu/go-librespot/proto/spotify/connectstate/devices"
+	extmetadatapb "github.com/devgianlu/go-librespot/proto/spotify/extendedmetadata"
 	metadatapb "github.com/devgianlu/go-librespot/proto/spotify/metadata"
 	"github.com/devgianlu/go-librespot/session"
 	"github.com/devgianlu/go-librespot/spclient"
@@ -115,6 +116,14 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, arti
 		if err := os.MkdirAll(outDir, 0o750); err != nil {
 			return err
 		}
+		if meta, err := s.fetchTrackMeta(ctx, *id); err == nil {
+			finalDir := filepath.Join(outDir, safeFilename(meta.Artist), safeFilename(meta.Album))
+			finalPath := filepath.Join(finalDir, trackFilename(meta))
+			if _, err := os.Stat(finalPath); err == nil {
+				slog.Info("skipping already downloaded track", "file", filepath.Base(finalPath))
+				return nil
+			}
+		}
 		rawPath, meta, err := s.downloadTrackRaw(ctx, *id, outDir)
 		if err != nil {
 			return err
@@ -182,6 +191,21 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 		if err != nil {
 			slog.Warn("skip track", "uri", trackURI, "error", err)
 			continue
+		}
+		if meta, err := s.fetchTrackMeta(gctx, id); err == nil {
+			if albumOverride != "" {
+				meta.Album = albumOverride
+			}
+			if artistOverride != "" {
+				meta.Artist = artistOverride
+			}
+			finalDir := filepath.Join(outDir, safeFilename(meta.Artist), safeFilename(meta.Album))
+			finalPath := filepath.Join(finalDir, trackFilename(meta))
+			if _, err := os.Stat(finalPath); err == nil {
+				slog.Info("skipping already downloaded track", "file", filepath.Base(finalPath))
+				entries = append(entries, playlistEntry{path: finalPath, meta: meta})
+				continue
+			}
 		}
 		rawPath, meta, err := s.downloadTrackRaw(gctx, id, outDir)
 		if err != nil {
@@ -282,19 +306,41 @@ func writePlaylist(outDir, name string, entries []playlistEntry) error {
 	return os.WriteFile(playlistPath, []byte(b.String()), 0o640)
 }
 
+// fetchTrackMeta fetches lightweight track metadata without downloading audio.
+func (s *Session) fetchTrackMeta(ctx context.Context, id librespot.SpotifyId) (trackMeta, error) {
+	var t metadatapb.Track
+	if err := s.sess.Spclient().ExtendedMetadataSimple(ctx, id, extmetadatapb.ExtensionKind_TRACK_V4, &t); err != nil {
+		return trackMeta{}, err
+	}
+	m := trackMeta{Title: t.GetName()}
+	if artists := t.GetArtist(); len(artists) > 0 {
+		m.Artist = artists[0].GetName()
+	}
+	if alb := t.GetAlbum(); alb != nil {
+		m.Album = alb.GetName()
+	}
+	if n := int(t.GetNumber()); n > 0 {
+		m.TrackNumber = n
+	}
+	if d := int(t.GetDiscNumber()); d > 0 {
+		m.DiscNumber = d
+	}
+	return m, nil
+}
+
 // downloadTrackRaw streams decoded PCM to a temp file in dir, retrying on audio key rate-limit errors.
 // Returns the temp file path and track metadata; caller is responsible for removing the file.
 func (s *Session) downloadTrackRaw(ctx context.Context, id librespot.SpotifyId, dir string) (string, trackMeta, error) {
 	rawPath, meta, err := s.downloadRaw(ctx, id, dir)
-	for i, d := range []time.Duration{20 * time.Second, 40 * time.Second, 60 * time.Second} {
+	for i := range 5 {
 		if err == nil || ctx.Err() != nil || !strings.Contains(err.Error(), "aes key") {
 			break
 		}
-		slog.Warn("audio key rate-limited, retrying", "delay", d, "attempt", i+2)
+		slog.Warn("audio key rate-limited, retrying", "attempt", i+2)
 		select {
 		case <-ctx.Done():
 			return "", trackMeta{}, ctx.Err()
-		case <-time.After(d):
+		case <-time.After(30 * time.Second):
 		}
 		rawPath, meta, err = s.downloadRaw(ctx, id, dir)
 	}
@@ -408,7 +454,6 @@ func (s *Session) downloadRaw(ctx context.Context, id librespot.SpotifyId, dir s
 		}
 	}
 }
-
 
 // trackFilename builds "Title.opus".
 func trackFilename(meta trackMeta) string {
