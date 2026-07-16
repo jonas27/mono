@@ -5,6 +5,17 @@ Streams tracks from Spotify and writes them as MP3 files (320 kbps). Requires `f
 ## Usage
 
 ```
+podman run -v ./.creds.yaml:/data/.creds.yaml -v /data/music:/data/music  --user $(id -u):$(id -g) docker.io/jonas27/spotigo:latest -output /data/music
+```
+
+```
+podman run -d --name navidrome --restart=unless-stopped --user $(id -u):$(id -g) \
+   -v /data/music:/music -v /data/navidrom:/data -p 4533:4533 -e ND_LOGLEVEL=info \
+   docker.io/deluan/navidrome:latest
+```
+
+
+```
 spotigo [flags] <spotify-url-or-uri>
 ```
 
@@ -18,6 +29,19 @@ Albums and playlists are downloaded in full; tracks are downloaded individually.
 | `-creds` | `.creds.yaml` | Credentials file |
 | `-output` | `downloads` | Output directory |
 | `-album` | _(none)_ | Override subdirectory name for albums/playlists |
+| `-lyrics` | `true` | Download lyrics alongside each track (`-lyrics=false` to disable) |
+
+## Lyrics
+
+By default spotigo downloads lyrics for each track when Spotify has them,
+writing them next to the audio file as `<Title>.lrc`:
+
+- Line-synced lyrics include `[mm:ss.cc]` timestamps (playable in most music
+  players that support synced lyrics).
+- Unsynced lyrics are written as plain lines in the same `.lrc` file.
+
+Tracks without lyrics are skipped silently, and existing `.lrc` files are left
+untouched. Pass `-lyrics=false` to turn this off.
 
 ## Docker
 

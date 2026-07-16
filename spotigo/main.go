@@ -29,6 +29,7 @@ func run() error {
 		flagOutput = flag.String("output", "downloads", "output directory (f32le PCM, 44100 Hz, stereo)")
 		flagAlbum  = flag.String("album", "", "album name override (overrides per-track album metadata)")
 		flagArtist = flag.String("artist", "", "artist name override (overrides per-track artist metadata)")
+		flagLyrics = flag.Bool("lyrics", true, "download synced lyrics (.lrc/.txt) alongside tracks")
 	)
 	flag.Parse()
 
@@ -52,5 +53,5 @@ func run() error {
 	}
 	defer sess.Close()
 
-	return sess.Run(ctx, args[0], *flagOutput, *flagAlbum, *flagArtist)
+	return sess.Run(ctx, args[0], *flagOutput, *flagAlbum, *flagArtist, *flagLyrics)
 }

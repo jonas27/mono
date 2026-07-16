@@ -98,7 +98,8 @@ func (s *Session) Close() {
 
 // Run streams the Spotify URL or URI, writing Opus files into outDir.
 // Output is organized into outDir/<artist>/<album>/ subdirectories.
-func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, artistOverride string) error {
+// When lyrics is true, synced lyrics are saved alongside each track.
+func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, artistOverride string, lyrics bool) error {
 	uri := toURI(urlOrURI)
 
 	parts := strings.SplitN(uri, ":", 3)
@@ -121,6 +122,9 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, arti
 			finalPath := filepath.Join(finalDir, trackFilename(meta))
 			if _, err := os.Stat(finalPath); err == nil {
 				slog.Info("skipping already downloaded track", "file", filepath.Base(finalPath))
+				if lyrics {
+					s.downloadLyrics(ctx, *id, finalDir, meta)
+				}
 				return nil
 			}
 		}
@@ -134,16 +138,19 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, arti
 			return err
 		}
 		_ = os.Rename(filepath.Join(outDir, "cover.jpg"), filepath.Join(finalDir, "cover.jpg"))
+		if lyrics {
+			s.downloadLyrics(ctx, *id, finalDir, meta)
+		}
 		finalPath := filepath.Join(finalDir, trackFilename(meta))
 		slog.Info("encoding track", "file", filepath.Base(finalPath))
 		return encodeOpusFromFile(ctx, rawPath, finalPath, meta)
 	default:
-		return s.streamContext(ctx, uri, outDir, albumOverride, artistOverride)
+		return s.streamContext(ctx, uri, outDir, albumOverride, artistOverride, lyrics)
 	}
 }
 
 // streamContext resolves an album/playlist and downloads every track sequentially.
-func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride, artistOverride string) error {
+func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride, artistOverride string, lyrics bool) error {
 	spotCtx, err := s.sess.Spclient().ContextResolve(ctx, uri)
 	if err != nil {
 		return fmt.Errorf("resolve context: %w", err)
@@ -203,6 +210,9 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 			finalPath := filepath.Join(finalDir, trackFilename(meta))
 			if _, err := os.Stat(finalPath); err == nil {
 				slog.Info("skipping already downloaded track", "file", filepath.Base(finalPath))
+				if lyrics {
+					s.downloadLyrics(gctx, id, finalDir, meta)
+				}
 				entries = append(entries, playlistEntry{path: finalPath, meta: meta})
 				continue
 			}
@@ -226,6 +236,9 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 		}
 		if _, err := os.Stat(filepath.Join(finalDir, "cover.jpg")); os.IsNotExist(err) {
 			_ = os.Rename(filepath.Join(outDir, "cover.jpg"), filepath.Join(finalDir, "cover.jpg"))
+		}
+		if lyrics {
+			s.downloadLyrics(gctx, id, finalDir, meta)
 		}
 		finalPath := filepath.Join(finalDir, trackFilename(meta))
 		slog.Info("encoding track", "file", filepath.Base(finalPath))
