@@ -1,0 +1,15 @@
+# Build artifacts
+spotigo
+/out
+
+# Secrets and local state — never bake into the image
+.creds.yaml
+downloads/
+
+# VCS and tooling
+.git
+.gitignore
+.golangci.yml
+Dockerfile
+.dockerignore
+README.md
