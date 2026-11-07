@@ -33,15 +33,17 @@ Albums and playlists are downloaded in full; tracks are downloaded individually.
 
 ## Lyrics
 
-By default spotigo downloads lyrics for each track when Spotify has them,
-writing them next to the audio file as `<Title>.lrc`:
+By default spotigo downloads lyrics for each track from
+[LRCLIB](https://lrclib.net) — a free, community-run, no-auth lyrics database —
+and writes them next to the audio file as `<Title>.lrc`:
 
-- Line-synced lyrics include `[mm:ss.cc]` timestamps (playable in most music
+- Line-synced lyrics include `[mm:ss.xx]` timestamps (playable in most music
   players that support synced lyrics).
 - Unsynced lyrics are written as plain lines in the same `.lrc` file.
 
-Tracks without lyrics are skipped silently, and existing `.lrc` files are left
-untouched. Pass `-lyrics=false` to turn this off.
+Lyrics are matched by artist, title, album and duration, falling back to a
+fuzzy artist/title search. Tracks without a match are skipped silently, and
+existing `.lrc` files are left untouched. Pass `-lyrics=false` to turn this off.
 
 ## Docker
 

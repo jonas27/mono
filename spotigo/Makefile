@@ -1,6 +1,6 @@
 .PHONY: build lint clean docker-build docker-push
 
-IMAGE    ?= jonas27test/spotigo
+IMAGE    ?= jonas27/spotigo
 VERSION  ?= latest
 # VERSION  ?= $(shell git describe --tags --always --dirty)
 PLATFORM := linux/amd64
@@ -18,5 +18,4 @@ docker-build:
 	docker build --platform $(PLATFORM) -t $(IMAGE):$(VERSION) -t $(IMAGE):latest .
 
 docker-push: docker-build
-	docker push $(IMAGE):$(VERSION)
-	docker push $(IMAGE):latest
+	docker push $(IMAGE):$(VERSION) --platform $(PLATFORM)

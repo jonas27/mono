@@ -123,7 +123,7 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, arti
 			if _, err := os.Stat(finalPath); err == nil {
 				slog.Info("skipping already downloaded track", "file", filepath.Base(finalPath))
 				if lyrics {
-					s.downloadLyrics(ctx, *id, finalDir, meta)
+					s.downloadLyrics(ctx, finalDir, meta)
 				}
 				return nil
 			}
@@ -137,9 +137,9 @@ func (s *Session) Run(ctx context.Context, urlOrURI, outDir, albumOverride, arti
 		if err := os.MkdirAll(finalDir, 0o750); err != nil {
 			return err
 		}
-		_ = os.Rename(filepath.Join(outDir, "cover.jpg"), filepath.Join(finalDir, "cover.jpg"))
+		downloadCover(ctx, meta.CoverURL, filepath.Join(finalDir, "cover.jpg"))
 		if lyrics {
-			s.downloadLyrics(ctx, *id, finalDir, meta)
+			s.downloadLyrics(ctx, finalDir, meta)
 		}
 		finalPath := filepath.Join(finalDir, trackFilename(meta))
 		slog.Info("encoding track", "file", filepath.Base(finalPath))
@@ -211,7 +211,7 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 			if _, err := os.Stat(finalPath); err == nil {
 				slog.Info("skipping already downloaded track", "file", filepath.Base(finalPath))
 				if lyrics {
-					s.downloadLyrics(gctx, id, finalDir, meta)
+					s.downloadLyrics(gctx, finalDir, meta)
 				}
 				entries = append(entries, playlistEntry{path: finalPath, meta: meta})
 				continue
@@ -234,11 +234,9 @@ func (s *Session) streamContext(ctx context.Context, uri, outDir, albumOverride,
 			os.Remove(rawPath)
 			continue
 		}
-		if _, err := os.Stat(filepath.Join(finalDir, "cover.jpg")); os.IsNotExist(err) {
-			_ = os.Rename(filepath.Join(outDir, "cover.jpg"), filepath.Join(finalDir, "cover.jpg"))
-		}
+		downloadCover(gctx, meta.CoverURL, filepath.Join(finalDir, "cover.jpg"))
 		if lyrics {
-			s.downloadLyrics(gctx, id, finalDir, meta)
+			s.downloadLyrics(gctx, finalDir, meta)
 		}
 		finalPath := filepath.Join(finalDir, trackFilename(meta))
 		slog.Info("encoding track", "file", filepath.Base(finalPath))
@@ -338,6 +336,7 @@ func (s *Session) fetchTrackMeta(ctx context.Context, id librespot.SpotifyId) (t
 	if d := int(t.GetDiscNumber()); d > 0 {
 		m.DiscNumber = d
 	}
+	m.Duration = int(t.GetDuration()) / 1000
 	return m, nil
 }
 
@@ -405,7 +404,6 @@ func (s *Session) downloadRaw(ctx context.Context, id librespot.SpotifyId, dir s
 		return "", trackMeta{}, fmt.Errorf("load stream: %w", ferr)
 	}
 
-	s.downloadCover(ctx, dir, stream)
 	meta = streamTrackMeta(stream)
 
 	rawPath = filepath.Join(dir, ".raw-"+randomHex(8))
@@ -473,37 +471,17 @@ func trackFilename(meta trackMeta) string {
 	return safeFilename(meta.Title) + ".opus"
 }
 
-// downloadCover saves cover.jpg in dir from the track's album art (no-op if already exists).
-func (s *Session) downloadCover(ctx context.Context, dir string, stream *lsplayer.Stream) {
-	if !stream.Media.IsTrack() {
+// downloadCover saves the album art at url to coverPath (no-op if url is empty
+// or coverPath already exists). Writing per-album into the final directory keeps
+// each album's cover isolated, so a playlist spanning albums never reuses a
+// previous album's art.
+func downloadCover(ctx context.Context, url, coverPath string) {
+	if url == "" {
 		return
 	}
-	coverPath := filepath.Join(dir, "cover.jpg")
 	if _, err := os.Stat(coverPath); err == nil {
 		return
 	}
-
-	album := stream.Media.Track().GetAlbum()
-	if album == nil {
-		return
-	}
-	var images []*metadatapb.Image
-	if cg := album.GetCoverGroup(); cg != nil {
-		images = cg.GetImage()
-	} else {
-		images = album.GetCover()
-	}
-	if len(images) == 0 {
-		return
-	}
-
-	img := images[0]
-	for _, i := range images {
-		if i.GetSize() > img.GetSize() {
-			img = i
-		}
-	}
-	url := "https://i.scdn.co/image/" + hex.EncodeToString(img.GetFileId())
 
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
@@ -529,6 +507,8 @@ type trackMeta struct {
 	Album       string
 	TrackNumber int
 	DiscNumber  int
+	Duration    int    // track length in seconds, 0 if unknown
+	CoverURL    string // album art URL, empty if none
 }
 
 func streamTrackMeta(stream *lsplayer.Stream) trackMeta {
@@ -540,6 +520,7 @@ func streamTrackMeta(stream *lsplayer.Stream) trackMeta {
 		}
 		if alb := t.GetAlbum(); alb != nil {
 			m.Album = alb.GetName()
+			m.CoverURL = coverURL(alb)
 		}
 		if n := int(t.GetNumber()); n > 0 {
 			m.TrackNumber = n
@@ -547,8 +528,30 @@ func streamTrackMeta(stream *lsplayer.Stream) trackMeta {
 		if d := int(t.GetDiscNumber()); d > 0 {
 			m.DiscNumber = d
 		}
+		m.Duration = int(t.GetDuration()) / 1000
 	}
 	return m
+}
+
+// coverURL returns the URL of the largest available cover image for album,
+// or "" if the album has no cover art.
+func coverURL(album *metadatapb.Album) string {
+	var images []*metadatapb.Image
+	if cg := album.GetCoverGroup(); cg != nil {
+		images = cg.GetImage()
+	} else {
+		images = album.GetCover()
+	}
+	if len(images) == 0 {
+		return ""
+	}
+	img := images[0]
+	for _, i := range images {
+		if i.GetSize() > img.GetSize() {
+			img = i
+		}
+	}
+	return "https://i.scdn.co/image/" + hex.EncodeToString(img.GetFileId())
 }
 
 // encodeOpus encodes f32le PCM from r into an Opus file at path using ffmpeg.
